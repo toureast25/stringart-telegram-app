@@ -1,205 +1,260 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Обработка изображения</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Загрузка фото — Telegram Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
+    :root {
+      --bg: #0f1115;
+      --card: #151924;
+      --text: #e7e9ee;
+      --muted: #9aa3b2;
+      --accent: #2ea6ff;
+      --border: #1f2430;
     }
-    .image-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    canvas {
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      max-width: 100%;
-    }
-    .controls {
-      margin-bottom: 20px;
-    }
-    .palette {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-    }
-    .color-box {
-      width: 60px;
-      height: 60px;
-      border-radius: 8px;
-      border: 1px solid #333;
-      display: flex;
-      justify-content: center;
-      align-items: flex-end;
-      font-size: 10px;
-      color: white;
-      text-shadow: 0 0 3px black;
-    }
+    body { margin: 0; font-family: system-ui, sans-serif; color: var(--text); background: var(--bg); }
+    .app { display: flex; flex-direction: column; min-height: 100dvh; }
+    header.app-header { display: flex; gap: 12px; padding: 12px; background: var(--card); border-bottom: 1px solid var(--border); }
+    header.app-header button { border: 1px solid var(--border); background: transparent; color: var(--text); padding: 10px 14px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+    header.app-header button.primary { background: var(--accent); border-color: transparent; color: #081018; }
+    main { display: grid; place-items: center; padding: 16px; flex: 1; }
+    .card { width: min(720px, 100%); background: var(--card); border: 1px solid var(--border); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.35); overflow: hidden; }
+    video { display: none; max-width: 100%; border-top: 1px solid var(--border); background: #000; }
+    .preview { display: none; border-top: 1px solid var(--border); background: #0c0f15; padding-bottom: 10px; }
+    .preview.active { display: block; }
+    .preview-label { padding: 10px 16px; font-weight: bold; }
+    .preview img { display: block; width: 100%; height: auto; object-fit: contain; background: #000; max-height: 70dvh; }
+    .second-preview { display: none; border-top: 1px solid var(--border); padding: 10px 16px; }
+    .second-preview.active { display: block; }
+    .second-preview img { width: 100%; height: auto; cursor: crosshair; }
+    .settings { margin-top: 10px; }
+    .settings label { display: block; margin-top: 8px; }
+    .settings input[type=range] { width: 60%; }
+    .settings input[type=number] { width: 80px; margin-left: 10px; }
+    .settings span { margin-left: 10px; }
+    .palette { margin-top: 15px; }
+    .palette-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .palette-colors { display: flex; flex-wrap: wrap; gap: 12px; }
+    .color-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .color-circle { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; }
+    .color-code { width: 70px; text-align: center; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 3px; }
   </style>
 </head>
 <body>
-
-  <h2>1) Изображение</h2>
-  <div class="image-container">
-    <canvas id="canvas"></canvas>
+  <div class="app">
+    <header class="app-header">
+      <button id="uploadBtn" class="primary" type="button">Выбрать файл</button>
+      <button id="cameraBtn" type="button">Сделать фото</button>
+      <button id="resetBtn" type="button" style="display:none">Сброс</button>
+    </header>
+    <main>
+      <section class="card">
+        <video id="cameraStream" autoplay playsinline></video>
+        <canvas id="snapshotCanvas" style="display:none"></canvas>
+        <div id="preview" class="preview">
+          <div class="preview-label">1)</div>
+          <img id="previewImg" alt="Предпросмотр изображения" />
+        </div>
+        <div id="secondPreview" class="second-preview">
+          <div class="preview-label">2)</div>
+          <img id="secondImg" alt="Изменённое изображение" />
+          <div class="settings" id="settingsPanel">
+            <label>
+              Ширина (px): 
+              <input type="range" id="resolutionRange" min="50" max="1000" step="1" value="200">
+              <input type="number" id="resolutionInput" min="50" max="1000" step="1" value="200">
+              <span id="percentDisplay">20%</span>
+            </label>
+            <label>
+              Размытие (px): 
+              <input type="range" id="blurRange" min="0" max="20" step="1" value="0">
+              <input type="number" id="blurInput" min="0" max="20" step="1" value="0">
+            </label>
+          </div>
+          <!-- Раздел 3 -->
+          <div class="palette">
+            <div class="preview-label">3) Палитра</div>
+            <div class="palette-controls">
+              Кол-во цветов:
+              <select id="colorCount">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6" selected>6</option>
+              </select>
+              <label>minDeltaE: 
+                <input type="number" id="minDeltaE" value="25" min="0" max="100" step="1" style="width:60px">
+              </label>
+            </div>
+            <div id="paletteColors" class="palette-colors"></div>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
-
-  <div class="controls">
-    <label>Ширина (px): 
-      <input type="range" id="widthRange" min="100" max="1000" value="600">
-      <input type="number" id="widthInput" min="100" max="1000" value="600">
-    </label>
-    <br>
-    <label>Размытие (px): 
-      <input type="range" id="blurRange" min="0" max="50" value="5">
-      <input type="number" id="blurInput" min="0" max="50" value="5">
-    </label>
-  </div>
-
-  <h2>3) Палитра</h2>
-  <label for="colorCount">Количество цветов:</label>
-  <select id="colorCount">
-    <option value="3">3</option>
-    <option value="6" selected>6</option>
-    <option value="9">9</option>
-    <option value="12">12</option>
-  </select>
-  <br>
-  <label for="minDeltaE">Минимальная разница (ΔE):</label>
-  <input type="number" id="minDeltaE" min="1" max="100" value="20">
-  <div class="palette" id="palette"></div>
-
   <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-    img.src = "test.png"; // тут твой файл
-    img.onload = () => {
-      drawImage();
-      extractPalette();
-    };
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.capture = 'environment';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
 
-    // Управление шириной
-    const widthRange = document.getElementById("widthRange");
-    const widthInput = document.getElementById("widthInput");
-    const blurRange = document.getElementById("blurRange");
-    const blurInput = document.getElementById("blurInput");
-    const colorCount = document.getElementById("colorCount");
-    const minDeltaEInput = document.getElementById("minDeltaE");
-    const paletteDiv = document.getElementById("palette");
+    const uploadBtn = document.getElementById('uploadBtn');
+    const cameraBtn = document.getElementById('cameraBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const preview = document.getElementById('preview');
+    const previewImg = document.getElementById('previewImg');
+    const cameraStream = document.getElementById('cameraStream');
+    const snapshotCanvas = document.getElementById('snapshotCanvas');
+    const resolutionRange = document.getElementById('resolutionRange');
+    const resolutionInput = document.getElementById('resolutionInput');
+    const percentDisplay = document.getElementById('percentDisplay');
+    const secondPreview = document.getElementById('secondPreview');
+    const secondImg = document.getElementById('secondImg');
+    const blurRange = document.getElementById('blurRange');
+    const blurInput = document.getElementById('blurInput');
+    const colorCount = document.getElementById('colorCount');
+    const paletteColors = document.getElementById('paletteColors');
+    const minDeltaEInput = document.getElementById('minDeltaE');
 
-    function syncWidth(val) {
-      widthRange.value = val;
-      widthInput.value = val;
-      drawImage();
-      extractPalette();
+    let originalImage = null;
+    let originalWidth = 0;
+    let currentPalette = [];
+    let activeColorIndex = null;
+
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change',()=>{const f=fileInput.files?.[0];if(f)handleFile(f);});
+
+    resetBtn.addEventListener('click',()=>{
+      fileInput.value=''; previewImg.removeAttribute('src'); preview.classList.remove('active');
+      secondImg.removeAttribute('src'); secondPreview.classList.remove('active'); cameraStream.style.display='none';
+      resetBtn.style.display='none'; uploadBtn.style.display=''; cameraBtn.style.display='';
+      resolutionRange.value = 200; resolutionInput.value = 200; percentDisplay.textContent = '20%';
+      originalImage = null; originalWidth = 0; paletteColors.innerHTML='';
+    });
+
+    cameraBtn.addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        cameraStream.srcObject = stream;
+        cameraStream.style.display = 'block';
+        setTimeout(() => { takeSnapshot(stream); }, 3000);
+      } catch (err) { alert('Не удалось открыть камеру: ' + err); }
+    });
+
+    function takeSnapshot(stream){
+      const ctx = snapshotCanvas.getContext('2d');
+      snapshotCanvas.width = cameraStream.videoWidth;
+      snapshotCanvas.height = cameraStream.videoHeight;
+      ctx.drawImage(cameraStream, 0, 0);
+      const dataURL = snapshotCanvas.toDataURL('image/png');
+      previewImg.src = dataURL; preview.classList.add('active');
+      originalImage = dataURL; originalWidth = cameraStream.videoWidth;
+      cameraStream.style.display = 'none'; stream.getTracks().forEach(track => track.stop());
+      uploadBtn.style.display='none'; cameraBtn.style.display='none'; resetBtn.style.display='';
+      resolutionRange.value = originalWidth * 0.2; resolutionInput.value = originalWidth * 0.2;
+      percentDisplay.textContent = '20%'; applyResolution();
     }
-    function syncBlur(val) {
-      blurRange.value = val;
-      blurInput.value = val;
-      drawImage();
-      extractPalette();
+
+    function handleFile(file){
+      if(!file||!file.type.startsWith('image/')){alert('Выбран не графический файл');return;}
+      const r=new FileReader();
+      r.onload=()=>{const img = new Image(); img.onload = ()=>{
+        previewImg.src=r.result; preview.classList.add('active');
+        originalImage = r.result; originalWidth = img.width;
+        uploadBtn.style.display='none'; cameraBtn.style.display='none'; resetBtn.style.display='';
+        resolutionRange.max = img.width; resolutionRange.value = img.width * 0.2;
+        resolutionInput.max = img.width; resolutionInput.value = img.width * 0.2;
+        percentDisplay.textContent = '20%'; applyResolution(); }; img.src = r.result;};
+      r.readAsDataURL(file);
     }
 
-    widthRange.oninput = e => syncWidth(e.target.value);
-    widthInput.oninput = e => syncWidth(e.target.value);
-    blurRange.oninput = e => syncBlur(e.target.value);
-    blurInput.oninput = e => syncBlur(e.target.value);
-    colorCount.onchange = extractPalette;
-    minDeltaEInput.oninput = extractPalette;
+    function updatePercent(){ percentDisplay.textContent = Math.round((resolutionInput.value / originalWidth) * 100) + '%'; }
+    resolutionRange.addEventListener('input',()=>{ resolutionInput.value=resolutionRange.value; updatePercent(); applyResolution(); });
+    resolutionInput.addEventListener('input',()=>{ resolutionRange.value=resolutionInput.value; updatePercent(); applyResolution(); });
+    blurRange.addEventListener('input',()=>{ blurInput.value=blurRange.value; applyResolution(); });
+    blurInput.addEventListener('input',()=>{ blurRange.value=blurInput.value; applyResolution(); });
 
-    function drawImage() {
-      const targetWidth = parseInt(widthInput.value, 10);
-      const scale = targetWidth / img.width;
-      const targetHeight = img.height * scale;
-
-      canvas.width = targetWidth;
-      canvas.height = targetHeight;
-
-      ctx.filter = `blur(${blurInput.value}px)`;
-      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+    function applyResolution(){
+      if(!originalImage) return;
+      const img = new Image();
+      img.onload = ()=>{
+        const newWidth = parseInt(resolutionInput.value);
+        const scale = newWidth / originalWidth;
+        const ctx = snapshotCanvas.getContext('2d');
+        snapshotCanvas.width = newWidth;
+        snapshotCanvas.height = img.height * scale;
+        ctx.filter = `blur(${blurInput.value}px)`;
+        ctx.drawImage(img, 0, 0, snapshotCanvas.width, snapshotCanvas.height);
+        ctx.filter = '';
+        secondImg.src = snapshotCanvas.toDataURL('image/png');
+        secondPreview.classList.add('active');
+        extractPalette();
+      }; img.src = originalImage;
     }
 
-    // ---------- Цветовые преобразования ----------
-    function rgbToLab(r, g, b) {
-      function pivot(n) {
-        return n > 0.008856 ? Math.pow(n, 1/3) : (7.787 * n) + (16/116);
+    // ---- Палитра ----
+    colorCount.addEventListener('change', extractPalette);
+    minDeltaEInput.addEventListener('input', extractPalette);
+
+    function extractPalette(){
+      if(!secondImg.src) return;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = secondImg.naturalWidth; canvas.height = secondImg.naturalHeight;
+      ctx.drawImage(secondImg, 0, 0);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const colors = {}; const step = 5;
+      for(let i=0;i<data.length;i+=4*step){
+        const r=data[i],g=data[i+1],b=data[i+2];
+        const key = `${Math.round(r/16)*16},${Math.round(g/16)*16},${Math.round(b/16)*16}`;
+        colors[key]=(colors[key]||0)+1;
       }
-      r /= 255; g /= 255; b /= 255;
-      r = r > 0.04045 ? Math.pow((r+0.055)/1.055, 2.4) : r/12.92;
-      g = g > 0.04045 ? Math.pow((g+0.055)/1.055, 2.4) : g/12.92;
-      b = b > 0.04045 ? Math.pow((b+0.055)/1.055, 2.4) : b/12.92;
-
-      let x = (r*0.4124 + g*0.3576 + b*0.1805) / 0.95047;
-      let y = (r*0.2126 + g*0.7152 + b*0.0722) / 1.00000;
-      let z = (r*0.0193 + g*0.1192 + b*0.9505) / 1.08883;
-
-      x = pivot(x); y = pivot(y); z = pivot(z);
-
-      return [
-        (116 * y) - 16,
-        500 * (x - y),
-        200 * (y - z)
-      ];
-    }
-
-    function deltaE(labA, labB) {
-      return Math.sqrt(
-        Math.pow(labA[0] - labB[0], 2) +
-        Math.pow(labA[1] - labB[1], 2) +
-        Math.pow(labA[2] - labB[2], 2)
-      );
-    }
-
-    function filterColorsByDeltaE(colors, minDeltaE) {
-      let result = [];
-      colors.forEach(c => {
-        let lab = rgbToLab(c[0], c[1], c[2]);
-        if (!result.some(r => deltaE(lab, rgbToLab(r[0], r[1], r[2])) < minDeltaE)) {
-          result.push(c);
-        }
-      });
-      return result;
-    }
-
-    function extractPalette() {
-      const count = parseInt(colorCount.value, 10);
-      const minDeltaE = parseInt(minDeltaEInput.value, 10);
-
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-
-      let colors = [];
-      for (let i = 0; i < data.length; i += 40*4) { // выборочно, чтобы ускорить
-        let r = data[i], g = data[i+1], b = data[i+2];
-        colors.push([r,g,b]);
+      const sorted=Object.entries(colors).sort((a,b)=>b[1]-a[1]);
+      const picked=[]; const minDeltaE=parseInt(minDeltaEInput.value)||25;
+      for(const [rgb] of sorted){
+        const [r,g,b]=rgb.split(',').map(Number);
+        if(picked.every(p=>deltaE(rgb2lab(p),rgb2lab([r,g,b]))>=minDeltaE)){picked.push([r,g,b]);}
+        if(picked.length>=parseInt(colorCount.value)) break;
       }
+      currentPalette = picked.map(c=>rgbToHex(c[0],c[1],c[2]));
+      renderPalette();
+    }
 
-      // простая сортировка по частоте
-      let map = {};
-      colors.forEach(c => {
-        let key = c.join(",");
-        map[key] = (map[key]||0)+1;
-      });
-      let sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]).map(e=>e[0].split(",").map(Number));
-
-      let filtered = filterColorsByDeltaE(sorted, minDeltaE).slice(0,count);
-
-      paletteDiv.innerHTML = "";
-      filtered.forEach(c=>{
-        let hex = "#"+c.map(x=>x.toString(16).padStart(2,"0")).join("");
-        let box = document.createElement("div");
-        box.className="color-box";
-        box.style.background = hex;
-        box.textContent = hex;
-        paletteDiv.appendChild(box);
+    function renderPalette(){
+      paletteColors.innerHTML='';
+      currentPalette.forEach((hex,i)=>{
+        const item=document.createElement('div'); item.className='color-item';
+        const circle=document.createElement('div'); circle.className='color-circle'; circle.style.background=hex;
+        circle.addEventListener('click',()=>{activeColorIndex=i;});
+        const input=document.createElement('input'); input.className='color-code'; input.value=hex;
+        input.addEventListener('input',()=>{ let val=input.value; if(/^#([0-9A-Fa-f]{6})$/.test(val)){circle.style.background=val; currentPalette[i]=val;} });
+        item.appendChild(circle); item.appendChild(input); paletteColors.appendChild(item);
       });
     }
+
+    // ---- Пипетка ----
+    secondImg.addEventListener('click',(e)=>{
+      if(activeColorIndex===null)return;
+      const rect=secondImg.getBoundingClientRect();
+      const x=Math.floor((e.clientX-rect.left)/rect.width*secondImg.naturalWidth);
+      const y=Math.floor((e.clientY-rect.top)/rect.height*secondImg.naturalHeight);
+      const cvs=document.createElement('canvas'); const ctx=cvs.getContext('2d');
+      cvs.width=secondImg.naturalWidth; cvs.height=secondImg.naturalHeight;
+      ctx.drawImage(secondImg,0,0); const pixel=ctx.getImageData(x,y,1,1).data;
+      const hex=rgbToHex(pixel[0],pixel[1],pixel[2]);
+      currentPalette[activeColorIndex]=hex; renderPalette();
+    });
+
+    // ---- Вспомогательные ----
+    function rgbToHex(r,g,b){return"#"+[r,g,b].map(x=>x.toString(16).padStart(2,"0")).join("");}
+    function rgb2lab(rgb){let[r,g,b]=rgb.map(v=>v/255);[r,g,b]=[r,g,b].map(v=>v>0.04045?Math.pow((v+0.055)/1.055,2.4):v/12.92);let x=r*0.4124+g*0.3576+b*0.1805,y=r*0.2126+g*0.7152+b*0.0722,z=r*0.0193+g*0.1192+b*0.9505;[x,y,z]=[x/0.95047,y/1.0,z/1.08883].map(v=>v>0.008856?Math.pow(v,1/3):(7.787*v)+(16/116));return[116*y-16,500*(x-y),200*(y-z)];}
+    function deltaE(labA,labB){const dL=labA[0]-labB[0],dA=labA[1]-labB[1],dB=labA[2]-labB[2];return Math.sqrt(dL*dL+dA*dA+dB*dB);}
   </script>
 </body>
 </html>
