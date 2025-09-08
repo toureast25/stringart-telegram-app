@@ -1,0 +1,51 @@
+{
+  "name": "StringArt Generator",
+  "short_name": "StringArt",
+  "description": "Create StringArt templates from photos with advanced color analysis",
+  "version": "1.0.0",
+  "author": "Tour_east",
+  "telegram_mini_app": {
+    "bot_username": "@stringart_bot",
+    "start_param": "stringart"
+  },
+  "icons": [
+    {
+      "src": "assets/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/icon-512.png", 
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#2ea6ff",
+  "background_color": "#0f1115",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "features": [
+    "image_processing",
+    "color_analysis", 
+    "kmeans_clustering",
+    "color_mapping",
+    "stringart_generation",
+    "telegram_integration"
+  ],
+  "supported_formats": [
+    "image/jpeg",
+    "image/png", 
+    "image/webp",
+    "image/gif"
+  ],
+  "algorithms": {
+    "clustering": [
+      "k-means",
+      "tones"
+    ],
+    "color_space": "LAB",
+    "distance_metric": "Delta E"
+  }
+}
