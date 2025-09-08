@@ -147,11 +147,6 @@
               <input type="number" id="lightCount" min="0" max="9" value="1" style="width:40px;">
             </label>
           </div>
-          <label>
-            Смягчение масок:
-            <input type="range" id="maskBlur" min="0" max="20" step="0.1" value="0" style="width:100px;">
-            <input type="number" id="maskBlurInput" min="0" max="20" step="0.1" value="0" style="width:40px;">
-          </label>
         </div>
         <div id="palette" class="palette"></div>
         <div id="pipetteOverlay" style="display:none;position:fixed;z-index:9999;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);justify-content:center;align-items:center;">
@@ -273,9 +268,6 @@ const darkCount=document.getElementById('darkCount');
 const midCount=document.getElementById('midCount');
 const lightCount=document.getElementById('lightCount');
 
-// Получаем ссылки на новые элементы
-const maskBlur = document.getElementById('maskBlur');
-const maskBlurInput = document.getElementById('maskBlurInput');
 
 // Элементы для работы с фактическими цветами
 const actualColorsSection = document.getElementById('actualColorsSection');
@@ -296,9 +288,6 @@ const canvasSize = document.getElementById('canvasSize');
 const nailCount = document.getElementById('nailCount');
 const stringartCanvas = document.getElementById('stringartCanvas');
 const stringartInfo = document.getElementById('stringartInfo');
-// Синхронизация слайдера и поля (обновляем только обычные маски)
-maskBlur.addEventListener('input',()=>{maskBlurInput.value=maskBlur.value;generateColorMaps();});
-maskBlurInput.addEventListener('input',()=>{maskBlur.value=maskBlurInput.value;generateColorMaps();});
 
 // Переменные для хранения исходного изображения и палитры
 let originalImage=null,originalWidth=0,currentPalette=[];
@@ -1041,18 +1030,7 @@ function generateActualColorMaps() {
       }
     }
     
-    // Применяем размытие к маске, если нужно
-    let blurValue = parseInt(maskBlur.value) || 0;
-    if (blurValue > 0) {
-      mapCtx.putImageData(mapImageData, 0, 0);
-      mapCtx.filter = `blur(${blurValue}px)`;
-      mapCtx.drawImage(mapCanvas, 0, 0);
-      mapCtx.filter = '';
-      const blurred = mapCtx.getImageData(0, 0, mapCanvas.width, mapCanvas.height);
-      mapCtx.putImageData(blurred, 0, 0);
-    } else {
-      mapCtx.putImageData(mapImageData, 0, 0);
-    }
+    mapCtx.putImageData(mapImageData, 0, 0);
     
     const img = document.createElement('img');
     img.src = mapCanvas.toDataURL();
@@ -1452,22 +1430,6 @@ function updateStringartPreview() {
   }
 }
 
-// Обновляем фактические маски при изменении размытия
-maskBlur.addEventListener('input', () => {
-  maskBlurInput.value = maskBlur.value;
-  generateColorMaps();
-  if (colorMapping.length > 0) {
-    generateActualColorMaps();
-  }
-});
-
-maskBlurInput.addEventListener('input', () => {
-  maskBlur.value = maskBlurInput.value;
-  generateColorMaps();
-  if (colorMapping.length > 0) {
-    generateActualColorMaps();
-  }
-});
 
 // ====== Карты ======
 // Новая функция генерации карт (вынесена из buildMapsBtn)
@@ -1497,19 +1459,7 @@ function generateColorMaps(){
       if(minIndex===index){mapData[i]=0;mapData[i+1]=0;mapData[i+2]=0;mapData[i+3]=255;}
       else{mapData[i]=255;mapData[i+1]=255;mapData[i+2]=255;mapData[i+3]=255;}
     }
-    // Применяем размытие к маске, если нужно
-    let blurValue = parseInt(maskBlur.value)||0;
-    if(blurValue>0){
-      mapCtx.putImageData(mapImageData,0,0);
-      mapCtx.filter = `blur(${blurValue}px)`;
-      mapCtx.drawImage(mapCanvas,0,0);
-      mapCtx.filter = '';
-      // После размытия снова получаем данные
-      const blurred = mapCtx.getImageData(0,0,mapCanvas.width,mapCanvas.height);
-      mapCtx.putImageData(blurred,0,0);
-    } else {
-      mapCtx.putImageData(mapImageData,0,0);
-    }
+    mapCtx.putImageData(mapImageData,0,0);
     
     // Создаём контейнер для карты с подписью
     const mapContainer = document.createElement('div');
