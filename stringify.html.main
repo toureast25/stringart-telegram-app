@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Telegram Mini App</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f4f4f4;
+    }
+    .app {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 1rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .preview {
+      margin-bottom: 1rem;
+    }
+    .preview img {
+      max-width: 100%;
+      border-radius: 8px;
+      display: block;
+      margin-top: 0.5rem;
+    }
+    .label {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    .settings {
+      margin: 1rem 0;
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .palette {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .color-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .color-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid #999;
+      cursor: pointer;
+      margin-bottom: 0.5rem;
+    }
+    .pipette-active {
+      outline: 2px solid red;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="controls" id="topMenu">
+      <input type="file" id="upload" accept="image/*" style="display:none">
+      <button onclick="document.getElementById('upload').click()">Загрузить фото</button>
+      <input type="file" id="camera" accept="image/*" capture="environment" style="display:none">
+      <button onclick="document.getElementById('camera').click()">Сделать фото</button>
+      <button id="resetBtn" style="display:none">Сброс</button>
+    </div>
+
+    <!-- 1 -->
+    <div class="preview" id="firstPreview">
+      <div class="label">1)</div>
+      <img id="firstImg">
+    </div>
+
+    <!-- 2 -->
+    <div class="preview" id="secondPreview" style="display:none">
+      <div class="label">2)</div>
+      <img id="secondImg">
+      <div class="settings">
+        <label>
+          Ширина (px):
+          <input type="range" id="resolutionRange" min="50" max="1000" step="1">
+          <input type="number" id="resolutionInput" min="50" max="1000" step="1">
+          <span id="percentDisplay">20%</span>
+        </label><br>
+        <label>
+          Размытие (px):
+          <input type="range" id="blurRange" min="0" max="20" step="1" value="0">
+          <input type="number" id="blurInput" min="0" max="20" step="1" value="0">
+        </label>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="preview" id="thirdPreview" style="display:none">
+      <div class="label">3) Палитра</div>
+      <label>
+        Количество цветов:
+        <select id="colorCount">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6" selected>6</option>
+        </select>
+      </label>
+      <div class="palette" id="palette"></div>
+    </div>
+  </div>
+
+  <canvas id="hiddenCanvas" style="display:none"></canvas>
+  <canvas id="snapshotCanvas" style="display:none"></canvas>
+
+  <script>
+    const upload = document.getElementById('upload');
+    const camera = document.getElementById('camera');
+    const resetBtn = document.getElementById('resetBtn');
+    const firstImg = document.getElementById('firstImg');
+    const secondImg = document.getElementById('secondImg');
+    const firstPreview = document.getElementById('firstPreview');
+    const secondPreview = document.getElementById('secondPreview');
+    const thirdPreview = document.getElementById('thirdPreview');
+
+    const resolutionRange = document.getElementById('resolutionRange');
+    const resolutionInput = document.getElementById('resolutionInput');
+    const percentDisplay = document.getElementById('percentDisplay');
+    const blurRange = document.getElementById('blurRange');
+    const blurInput = document.getElementById('blurInput');
+
+    const colorCount = document.getElementById('colorCount');
+    const paletteDiv = document.getElementById('palette');
+
+    const hiddenCanvas = document.getElementById('hiddenCanvas');
+    const snapshotCanvas = document.getElementById('snapshotCanvas');
+
+    let originalImage = null;
+    let originalWidth = 0;
+    let originalHeight = 0;
+
+    upload.addEventListener('change', handleFile);
+    camera.addEventListener('change', handleFile);
+
+    function handleFile(e){
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        firstImg.src = ev.target.result;
+        originalImage = ev.target.result;
+        resetBtn.style.display = "inline-block";
+        secondPreview.style.display = "block";
+        thirdPreview.style.display = "block";
+      }
+      reader.readAsDataURL(file);
+    }
+
+    firstImg.onload = function(){
+      originalWidth = firstImg.naturalWidth;
+      originalHeight = firstImg.naturalHeight;
+      resolutionRange.max = originalWidth;
+      resolutionInput.max = originalWidth;
+      const def = Math.round(originalWidth * 0.2);
+      resolutionRange.value = def;
+      resolutionInput.value = def;
+      percentDisplay.textContent = "20%";
+      applyResolution();
+    }
+
+    function applyResolution(){
+      if(!originalImage) return;
+      const img = new Image();
+      img.onload = () => {
+        const newWidth = parseInt(resolutionInput.value);
+        const scale = newWidth / originalWidth;
+        snapshotCanvas.width = newWidth;
+        snapshotCanvas.height = img.height * scale;
+        const ctx = snapshotCanvas.getContext('2d');
+        ctx.filter = `blur(${blurInput.value}px)`;
+        ctx.drawImage(img, 0, 0, snapshotCanvas.width, snapshotCanvas.height);
+        ctx.filter = '';
+        secondImg.src = snapshotCanvas.toDataURL('image/png');
+        secondImg.style.width = '100%';
+        extractColors(); // обновляем палитру
+      };
+      img.src = originalImage;
+    }
+
+    resolutionRange.addEventListener('input', ()=>{
+      resolutionInput.value = resolutionRange.value;
+      percentDisplay.textContent = Math.round((resolutionInput.value / originalWidth) * 100) + '%';
+      applyResolution();
+    });
+    resolutionInput.addEventListener('input', ()=>{
+      resolutionRange.value = resolutionInput.value;
+      percentDisplay.textContent = Math.round((resolutionInput.value / originalWidth) * 100) + '%';
+      applyResolution();
+    });
+
+    blurRange.addEventListener('input', ()=>{
+      blurInput.value = blurRange.value;
+      applyResolution();
+    });
+    blurInput.addEventListener('input', ()=>{
+      blurRange.value = blurInput.value;
+      applyResolution();
+    });
+
+    resetBtn.addEventListener('click', ()=>{
+      originalImage = null;
+      firstImg.src = '';
+      secondImg.src = '';
+      resetBtn.style.display = "none";
+      secondPreview.style.display = "none";
+      thirdPreview.style.display = "none";
+    });
+
+    // === Палитра ===
+    function extractColors(){
+      if(!secondImg.src) return;
+      const temp = document.createElement('canvas');
+      temp.width = secondImg.naturalWidth;
+      temp.height = secondImg.naturalHeight;
+      const ctx = temp.getContext('2d');
+      ctx.drawImage(secondImg, 0, 0);
+      const data = ctx.getImageData(0, 0, temp.width, temp.height).data;
+
+      let colors = {};
+      for(let i=0; i<data.length; i+=4*50){ // шаг 50 пикселей
+        const r = data[i], g = data[i+1], b = data[i+2];
+        const key = `${r},${g},${b}`;
+        colors[key] = (colors[key]||0)+1;
+      }
+      let sorted = Object.entries(colors).sort((a,b)=>b[1]-a[1]);
+      let needed = parseInt(colorCount.value);
+      let palette = sorted.slice(0, needed).map(c=>`rgb(${c[0]})`);
+      renderPalette(palette);
+    }
+
+    function renderPalette(colors){
+      paletteDiv.innerHTML = '';
+      colors.forEach((c,i)=>{
+        const item = document.createElement('div');
+        item.className = 'color-item';
+        const circle = document.createElement('input');
+        circle.type = 'color';
+        circle.value = rgbToHex(c);
+        circle.className = 'color-circle';
+        const code = document.createElement('input');
+        code.type = 'text';
+        code.value = circle.value;
+        code.size = 7;
+
+        circle.addEventListener('input', ()=>{ code.value = circle.value; });
+        code.addEventListener('input', ()=>{ circle.value = code.value; });
+
+        item.appendChild(circle);
+        item.appendChild(code);
+        paletteDiv.appendChild(item);
+      });
+    }
+
+    function rgbToHex(rgb){
+      const [r,g,b] = rgb.match(/\d+/g).map(Number);
+      return "#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+    }
+
+    colorCount.addEventListener('change', extractColors);
+  </script>
+</body>
+</html>
