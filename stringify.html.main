@@ -91,6 +91,21 @@
       <!-- 3) -->
       <div id="paletteSection" class="second-preview">
         <div class="preview-label">3)</div>
+        <div id="backgroundSettings" class="settings">
+          <label style="font-weight:bold;">Цвет фона:</label>
+          <div class="color-controls">
+            <button type="button" class="color-circle" style="background:#fff; border:2px solid #ccc;" data-bg="#ffffff" title="Белый"></button>
+            <button type="button" class="color-circle" style="background:#000; border:2px solid #ccc;" data-bg="#000000" title="Чёрный"></button>
+            <button type="button" class="color-circle" style="background:#888; border:2px solid #ccc;" data-bg="#888888" title="Серый"></button>
+            <input type="color" id="bgColorPicker" value="#ffffff" title="Выбрать цвет" style="width:32px;height:32px;border:none;cursor:pointer;">
+            <span id="currentBgColor" style="margin-left:10px;">#ffffff</span>
+          </div>
+          <div style="margin-top:10px;">
+            <label>Ширина полосы для автоопределения (%):
+              <input type="number" id="bgEdgePercent" min="1" max="50" value="10" style="width:60px;">
+            </label>
+          </div>
+        </div>
         <div class="settings">
           <label>
             Метод кластеризации:
@@ -288,6 +303,118 @@ let originalImage=null,originalWidth=0,currentPalette=[];
 let actualPalette=[]; // Фактическая палитра доступных цветов
 let colorMapping=[]; // Сопоставление расчётных цветов с фактическими
 
+// === ФОН ===
+const backgroundSettings = document.getElementById('backgroundSettings');
+const bgColorPicker = document.getElementById('bgColorPicker');
+const bgPipetteBtn = document.getElementById('bgPipetteBtn');
+const currentBgColor = document.getElementById('currentBgColor');
+let backgroundColor = '#ffffff'; // по умолчанию
+
+// Функция для обновления отображения текущего цвета фона
+function updateBgColorDisplay(hex) {
+  console.log('updateBgColorDisplay вызвана с hex:', hex);
+  currentBgColor.textContent = hex;
+  currentBgColor.style.background = hex;
+  if (bgColorPicker) {
+    console.log('Обновляем bgColorPicker.value на:', hex);
+    bgColorPicker.value = hex;
+  } else {
+    console.log('bgColorPicker не найден!');
+  }
+}
+
+// Функция для установки цвета фона
+function setBackgroundColor(hex) {
+  console.log('setBackgroundColor вызвана с hex:', hex);
+  backgroundColor = hex;
+  updateBgColorDisplay(hex);
+}
+
+// Обработчик выбора предустановленных цветов
+backgroundSettings.querySelectorAll('.color-circle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    setBackgroundColor(btn.getAttribute('data-bg'));
+  });
+});
+
+// Обработчик палитры
+bgColorPicker.addEventListener('input', e => {
+  setBackgroundColor(e.target.value);
+});
+
+// --- Автоматическое определение цвета фона по краям изображения ---
+// Получаем ссылку на поле процента
+const bgEdgePercent = document.getElementById('bgEdgePercent');
+
+function getAverageEdgeColor(img) {
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth || img.width;
+  canvas.height = img.naturalHeight || img.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const w = canvas.width, h = canvas.height;
+  const imageData = ctx.getImageData(0, 0, w, h).data;
+  let r = 0, g = 0, b = 0, count = 0;
+  // Получаем процент из поля, ограничиваем от 1 до 100
+  let percent = 10;
+  if (typeof bgEdgePercent !== 'undefined' && bgEdgePercent) {
+    percent = Math.max(1, Math.min(100, parseInt(bgEdgePercent.value) || 10));
+  }
+  const edgeY = Math.max(1, Math.round(h * percent / 100)); // % от высоты
+  const edgeX = Math.max(1, Math.round(w * percent / 100)); // % от ширины
+  // Верхняя полоса
+  for (let y = 0; y < edgeY; y++) {
+    for (let x = 0; x < w; x++) {
+      let iTop = (y * w + x) * 4;
+      r += imageData[iTop]; g += imageData[iTop + 1]; b += imageData[iTop + 2];
+      count++;
+    }
+  }
+  // Левая и правая полосы (без углов, чтобы не дублировать)
+  for (let x = 0; x < edgeX; x++) {
+    for (let y = edgeY; y < h - edgeY; y++) {
+      let iLeft = (y * w + x) * 4;
+      let iRight = (y * w + (w - 1 - x)) * 4;
+      r += imageData[iLeft]; g += imageData[iLeft + 1]; b += imageData[iLeft + 2];
+      r += imageData[iRight]; g += imageData[iRight + 1]; b += imageData[iRight + 2];
+      count += 2;
+    }
+  }
+  r = Math.round(r / count);
+  g = Math.round(g / count);
+  b = Math.round(b / count);
+  return rgbToHex(r, g, b);
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+// При изменении процента — пересчитываем цвет фона, если изображение есть
+if (bgEdgePercent) {
+  function recalcBgColorByPercent() {
+    console.log('recalcBgColorByPercent вызвана');
+    console.log('previewImg:', previewImg);
+    console.log('previewImg.src:', previewImg ? previewImg.src : 'нет');
+    console.log('previewImg.complete:', previewImg ? previewImg.complete : 'нет');
+    console.log('previewImg.naturalWidth:', previewImg ? previewImg.naturalWidth : 'нет');
+    if (previewImg && previewImg.src && previewImg.complete && previewImg.naturalWidth > 0) {
+      const hex = getAverageEdgeColor(previewImg);
+      setBackgroundColor(hex);
+    } else {
+      console.log('Условия для пересчёта цвета фона не выполнены');
+    }
+  }
+  bgEdgePercent.addEventListener('input', recalcBgColorByPercent);
+  bgEdgePercent.addEventListener('change', recalcBgColorByPercent);
+}
+
+// После загрузки изображения определяем цвет фона автоматически
+function autoDetectBg(img) {
+  const hex = getAverageEdgeColor(img);
+  setBackgroundColor(hex);
+}
+
 // --- Функция для загрузки тестового изображения по умолчанию ---
 function loadDefaultImage() {
   const defaultImgUrl = 'https://sun9-83.userapi.com/s/v1/ig1/XJRPO-T4RuE0KFMctnOM20rCs68dYcO4H5KnFW6s5E_x1BlQhkN2lojil1AW11LQ6xGG1uKa.jpg?quality=96&as=32x40,48x60,72x90,108x135,160x200,240x300,360x449,480x599,540x674,640x799,720x899,865x1080&from=bu&cs=865x0';
@@ -314,6 +441,7 @@ function loadDefaultImage() {
     resolutionInput.value = img.width * 0.2;
     percentDisplay.textContent = '20%';
     applyResolution();
+    autoDetectBg(img); // <--- определяем фон
   };
   img.src = defaultImgUrl;
 }
@@ -403,6 +531,7 @@ function handleFile(file){
       resolutionInput.value = img.width * 0.2;
       percentDisplay.textContent = '20%';
       applyResolution();
+      autoDetectBg(img); // <--- определяем фон
     };
     img.src = r.result;
   };
@@ -1148,6 +1277,9 @@ function extractPalette(){
  // Синхронизируем фактическую палитру с расчётной, если включена соответствующая галочка
  syncActualWithCalculated();
  
+ // Обновляем отображение сопоставления
+ renderActualPalette();
+ 
  // Активируем 5-й раздел и генерируем схему StringArt
  stringartSection.classList.add('active');
  generateStringartPreview();
@@ -1176,11 +1308,21 @@ function renderPalette(){
       code.value=circle.value;
       currentPalette[idx]=circle.value;
       generateColorMaps();
+      if (typeof syncWithCalculated !== 'undefined' && syncWithCalculated.checked) {
+        syncActualWithCalculated();
+      } else {
+        renderActualPalette();
+      }
     });
     code.addEventListener('input',()=>{
       circle.value=code.value;
       currentPalette[idx]=code.value;
       generateColorMaps();
+      if (typeof syncWithCalculated !== 'undefined' && syncWithCalculated.checked) {
+        syncActualWithCalculated();
+      } else {
+        renderActualPalette();
+      }
     });
     // Строка управления значением и пипеткой
     const controls=document.createElement('div');
