@@ -17,7 +17,11 @@ class ColorAnalyzer {
       paletteDiv: document.getElementById('palette'),
       colorMaps: document.getElementById('colorMaps'),
       kmeansSettings: document.getElementById('kmeansSettings'),
-      tonesSettings: document.getElementById('tonesSettings')
+      tonesSettings: document.getElementById('tonesSettings'),
+      backgroundSettings: document.getElementById('backgroundSettings'),
+      bgColorPicker: document.getElementById('bgColorPicker'),
+      currentBgColor: document.getElementById('currentBgColor'),
+      bgEdgePercent: document.getElementById('bgEdgePercent')
     };
     
     this.bindEvents();
@@ -43,6 +47,25 @@ class ColorAnalyzer {
     this.elements.darkCount?.addEventListener('input', () => this.handleTonesCountChange());
     this.elements.midCount?.addEventListener('input', () => this.handleTonesCountChange());
     this.elements.lightCount?.addEventListener('input', () => this.handleTonesCountChange());
+    
+    // Обработчики для настроек фона
+    this.elements.bgColorPicker?.addEventListener('input', (e) => {
+      this.app.setBackgroundColor(e.target.value);
+    });
+    
+    this.elements.bgEdgePercent?.addEventListener('input', () => {
+      this.recalculateBackgroundColor();
+    });
+    
+    // Обработчики для предустановленных цветов фона
+    this.elements.backgroundSettings?.querySelectorAll('.color-circle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const bgColor = btn.getAttribute('data-bg');
+        if (bgColor) {
+          this.app.setBackgroundColor(bgColor);
+        }
+      });
+    });
   }
   
   updateMethodInterface() {
@@ -377,6 +400,15 @@ class ColorAnalyzer {
     pipetteOverlay.style.display = 'flex';
   }
   
+  recalculateBackgroundColor() {
+    const previewImg = document.getElementById('previewImg');
+    if (previewImg && previewImg.src && previewImg.complete && previewImg.naturalWidth > 0) {
+      const percent = parseInt(this.elements.bgEdgePercent.value) || 10;
+      const bgColor = Utils.getAverageEdgeColor(previewImg, percent);
+      this.app.setBackgroundColor(bgColor);
+    }
+  }
+  
   reset() {
     // Сброс UI элементов
     this.elements.paletteDiv.innerHTML = '';
@@ -395,6 +427,22 @@ class ColorAnalyzer {
       this.lastPalette = state.currentPalette;
       this.renderPalette();
       this.generateColorMaps();
+    }
+    
+    if (state.backgroundColor !== this.lastBackgroundColor) {
+      this.lastBackgroundColor = state.backgroundColor;
+      this.updateBackgroundDisplay(state.backgroundColor);
+    }
+  }
+  
+  updateBackgroundDisplay(color) {
+    if (this.elements.currentBgColor) {
+      this.elements.currentBgColor.textContent = color;
+      this.elements.currentBgColor.style.background = color;
+    }
+    
+    if (this.elements.bgColorPicker) {
+      this.elements.bgColorPicker.value = color;
     }
   }
 }

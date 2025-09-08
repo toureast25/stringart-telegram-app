@@ -32,6 +32,7 @@ class StringArtApp {
       // Инициализация модулей
       this.imageProcessor = new ImageProcessor(this);
       this.colorAnalyzer = new ColorAnalyzer(this);
+      this.actualColors = new ActualColors(this);
       this.stringartGenerator = new StringArtGenerator(this);
       
       // Инициализация UI
@@ -89,8 +90,8 @@ class StringArtApp {
   }
   
   loadDefaultImage() {
-    const defaultImgUrl = 'assets/images/i.webp';
-    this.imageProcessor.loadImage(defaultImgUrl);
+    // Загружаем тестовое изображение
+    this.imageProcessor.loadImage();
   }
   
   resetApp() {
@@ -107,7 +108,11 @@ class StringArtApp {
     // Сброс UI
     this.imageProcessor.reset();
     this.colorAnalyzer.reset();
+    this.actualColors.reset();
     this.stringartGenerator.reset();
+    
+    // Загружаем тестовое изображение заново
+    this.loadDefaultImage();
   }
   
   // Методы для обновления состояния
@@ -120,6 +125,7 @@ class StringArtApp {
     // Уведомляем модули об изменении состояния
     this.imageProcessor?.onStateChange?.(this.state);
     this.colorAnalyzer?.onStateChange?.(this.state);
+    this.actualColors?.onStateChange?.(this.state);
     this.stringartGenerator?.onStateChange?.(this.state);
   }
   

@@ -119,6 +119,9 @@ class ImageProcessor {
   }
   
   loadImage(url) {
+    // Для тестового изображения используем прямой URL
+    const defaultImgUrl = 'https://sun9-83.userapi.com/s/v1/ig1/XJRPO-T4RuE0KFMctnOM20rCs68dYcO4H5KnFW6s5E_x1BlQhkN2lojil1AW11LQ6xGG1uKa.jpg?quality=96&as=32x40,48x60,72x90,108x135,160x200,240x300,360x449,480x599,540x674,640x799,720x899,865x1080&from=bu&cs=865x0';
+    
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
@@ -132,9 +135,38 @@ class ImageProcessor {
       this.loadImageFromDataURL(dataURL, img.width);
     };
     img.onerror = () => {
-      console.error('Failed to load default image');
+      console.error('Failed to load default image, trying fallback');
+      // Fallback - создаем простое тестовое изображение
+      this.createFallbackImage();
     };
-    img.src = url;
+    img.src = defaultImgUrl;
+  }
+  
+  createFallbackImage() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 300;
+    const ctx = canvas.getContext('2d');
+    
+    // Создаем простой градиент как тестовое изображение
+    const gradient = ctx.createLinearGradient(0, 0, 400, 300);
+    gradient.addColorStop(0, '#ff6b6b');
+    gradient.addColorStop(0.5, '#4ecdc4');
+    gradient.addColorStop(1, '#45b7d1');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 400, 300);
+    
+    // Добавляем текст
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Test Image', 200, 150);
+    ctx.font = '16px Arial';
+    ctx.fillText('StringArt Generator', 200, 180);
+    
+    const dataURL = canvas.toDataURL('image/png');
+    this.loadImageFromDataURL(dataURL, 400);
   }
   
   loadImageFromDataURL(dataURL, width) {

@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>StringArt Generator — Telegram Mini App</title>
+  
+  <!-- Telegram Mini App Script -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <!-- Manifest for PWA support -->
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  
+  <!-- Meta tags for better SEO and sharing -->
+  <meta name="description" content="Create StringArt templates from photos with advanced color analysis and k-means clustering">
+  <meta name="keywords" content="stringart, telegram, miniapp, color analysis, image processing">
+  <meta name="author" content="Tour_east">
+  
+  <!-- Open Graph meta tags -->
+  <meta property="og:title" content="StringArt Generator">
+  <meta property="og:description" content="Create StringArt templates from photos">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/images/i.webp">
+  
+  <!-- Telegram Mini App meta -->
+  <meta name="telegram:card" content="app">
+  <meta name="telegram:title" content="StringArt Generator">
+  <meta name="telegram:description" content="Create StringArt templates from photos">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <button id="uploadBtn" class="primary" type="button">Выбрать файл</button>
+    <button id="cameraBtn" type="button">Сделать фото</button>
+    <button id="resetBtn" type="button" style="display:none">Сброс</button>
+  </header>
+  
+  <main>
+    <section class="card">
+      <!-- Camera Stream -->
+      <video id="cameraStream" autoplay playsinline></video>
+      <canvas id="snapshotCanvas" style="display:none"></canvas>
+
+      <!-- Step 1: Image Preview -->
+      <div id="preview" class="preview">
+        <div class="preview-label">1) Исходное изображение</div>
+        <img id="previewImg" alt="Предпросмотр"/>
+      </div>
+
+      <!-- Step 2: Image Processing -->
+      <div id="secondPreview" class="second-preview">
+        <div class="preview-label">2) Обработка изображения</div>
+        <img id="secondImg" alt="Обработанное изображение"/>
+        <div class="settings">
+          <label>
+            Ширина (px):
+            <input type="range" id="resolutionRange" min="50" max="1000" step="1" value="200">
+            <input type="number" id="resolutionInput" min="50" max="1000" step="1" value="200">
+            <span id="percentDisplay">20%</span>
+          </label>
+          <label>
+            Размытие (px):
+            <input type="range" id="blurRange" min="0" max="20" step="0.1" value="0">
+            <input type="number" id="blurInput" min="0" max="20" step="0.1" value="0">
+          </label>
+        </div>
+      </div>
+
+      <!-- Step 3: Color Analysis -->
+      <div id="paletteSection" class="second-preview">
+        <div class="preview-label">3) Анализ цветов</div>
+        
+        <!-- Background Settings -->
+        <div id="backgroundSettings" class="settings">
+          <label style="font-weight:bold;">Цвет фона:</label>
+          <div class="color-controls">
+            <button type="button" class="color-circle" style="background:#fff; border:2px solid #ccc;" data-bg="#ffffff" title="Белый"></button>
+            <button type="button" class="color-circle" style="background:#000; border:2px solid #ccc;" data-bg="#000000" title="Чёрный"></button>
+            <button type="button" class="color-circle" style="background:#888; border:2px solid #ccc;" data-bg="#888888" title="Серый"></button>
+            <input type="color" id="bgColorPicker" value="#ffffff" title="Выбрать цвет" style="width:32px;height:32px;border:none;cursor:pointer;">
+            <span id="currentBgColor" style="margin-left:10px;">#ffffff</span>
+          </div>
+          <div style="margin-top:10px;">
+            <label>Ширина полосы для автоопределения (%):
+              <input type="number" id="bgEdgePercent" min="1" max="50" value="10" style="width:60px;">
+            </label>
+          </div>
+        </div>
+        
+        <!-- Color Analysis Settings -->
+        <div class="settings">
+          <label>
+            Метод кластеризации:
+            <select id="clusteringMethod">
+              <option value="kmeans">k-means</option>
+              <option value="tones" selected>По тонам</option>
+            </select>
+          </label>
+          <label>
+            Кол-во цветов:
+            <select id="colorCount">
+              <option value="3" selected>3</option>
+              <option value="6">6</option>
+              <option value="9">9</option>
+              <option value="12">12</option>
+              <option value="15">15</option>
+            </select>
+          </label>
+          
+          <!-- k-means Settings -->
+          <div id="kmeansSettings" class="method-settings">
+            <!-- Настройки для k-means -->
+          </div>
+          
+          <!-- Tones Settings -->
+          <div id="tonesSettings" class="method-settings" style="display:none;">
+            <label>
+              Минимальная ΔE:
+              <input type="number" id="minDeltaE" min="1" max="100" value="25">
+            </label>
+            <label>
+              Тёмные:
+              <input type="number" id="darkCount" min="0" max="9" value="1" style="width:40px;">
+            </label>
+            <label>
+              Средние:
+              <input type="number" id="midCount" min="0" max="9" value="1" style="width:40px;">
+            </label>
+            <label>
+              Светлые:
+              <input type="number" id="lightCount" min="0" max="9" value="1" style="width:40px;">
+            </label>
+          </div>
+        </div>
+        
+        <!-- Color Palette -->
+        <div id="palette" class="palette"></div>
+        
+        <!-- Pipette Overlay -->
+        <div id="pipetteOverlay">
+          <img id="pipetteImg"/>
+        </div>
+        
+        <!-- Color Maps -->
+        <div id="colorMaps" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;"></div>
+      </div>
+
+      <!-- Step 4: Actual Colors Mapping -->
+      <div id="actualColorsSection" class="second-preview">
+        <div class="preview-label">4) Сопоставление с фактическими цветами</div>
+        <div class="settings">
+          <label>
+            Фактическая палитра (доступные цвета):
+            <button id="addColorBtn" type="button" style="margin-left:10px;padding:4px 8px;background:var(--accent);border:none;border-radius:4px;color:#081018;cursor:pointer;">+ Добавить цвет</button>
+          </label>
+          <div id="actualPalette" class="palette" style="margin-top:10px;">
+            <!-- Фактические цвета будут добавляться здесь -->
+          </div>
+          <div style="margin-top:15px;">
+            <label>
+              <input type="checkbox" id="syncWithCalculated" checked> Соответствие расчётной палитре
+            </label>
+            <label style="margin-left:15px;">
+              <input type="checkbox" id="autoMatchColors" checked> Автоматическое сопоставление
+            </label>
+            <button id="syncPaletteBtn" type="button" style="margin-left:10px;padding:6px 12px;background:var(--accent);border:none;border-radius:6px;color:#081018;cursor:pointer;">Синхронизировать</button>
+            <button id="matchColorsBtn" type="button" style="margin-left:10px;padding:6px 12px;background:var(--accent);border:none;border-radius:6px;color:#081018;cursor:pointer;">Сопоставить цвета</button>
+          </div>
+        </div>
+        <div id="colorMapping" style="margin-top:15px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;">
+          <h4 style="margin:0 0 10px 0;">Сопоставление цветов:</h4>
+          <div id="mappingList">
+            <!-- Список сопоставлений будет здесь -->
+          </div>
+        </div>
+        <div id="actualColorMaps" style="margin-top:15px;">
+          <h4 style="margin:0 0 10px 0;">Маски с фактическими цветами: <span id="usedColorsInfo" style="font-size:12px;color:var(--muted);font-weight:normal;"></span></h4>
+          <div id="actualMapsContainer" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+        </div>
+      </div>
+
+      <!-- Step 5: StringArt Settings -->
+      <div id="stringartSection" class="second-preview">
+        <div class="preview-label">5) Настройки StringArt</div>
+        <div class="settings">
+          <label>
+            Форма полотна:
+            <select id="canvasShape">
+              <option value="circle" selected>Круглый</option>
+              <option value="square">Квадратный</option>
+            </select>
+          </label>
+          <label>
+            Размер полотна:
+            <select id="canvasSize">
+              <option value="30" selected>30 см</option>
+            </select>
+          </label>
+          <label>
+            Количество гвоздей:
+            <input type="number" id="nailCount" min="50" max="500" value="200" style="width:80px;">
+          </label>
+        </div>
+        <div id="stringartPreview" style="margin-top:15px;text-align:center;">
+          <h4 style="margin:0 0 10px 0;">Схема полотна:</h4>
+          <canvas id="stringartCanvas" style="background:transparent;max-width:100%;height:auto;"></canvas>
+          <div id="stringartInfo" style="margin-top:10px;font-size:12px;color:var(--muted);">
+            Размер: 30 см | Гвоздей: 200 | Расстояние между гвоздями: ~0.47 см
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- JavaScript Modules -->
+<script src="assets/js/utils.js"></script>
+<script src="assets/js/telegramAPI.js"></script>
+<script src="assets/js/imageProcessor.js"></script>
+<script src="assets/js/colorAnalyzer.js"></script>
+<script src="assets/js/actualColors.js"></script>
+<script src="assets/js/stringartGenerator.js"></script>
+<script src="assets/js/app.js"></script>
+
+<!-- Pipette functionality -->
+<script>
+// Обработчик пипетки (временно здесь, потом перенесем в отдельный модуль)
+document.addEventListener('DOMContentLoaded', () => {
+  const pipetteOverlay = document.getElementById('pipetteOverlay');
+  const pipetteImg = document.getElementById('pipetteImg');
+  
+  // Клик по оверлею вне картинки — закрыть
+  pipetteOverlay?.addEventListener('click', (e) => {
+    if (e.target === pipetteOverlay) {
+      pipetteOverlay.style.display = 'none';
+    }
+  });
+  
+  // Клик по изображению в оверлее — выбор цвета
+  pipetteImg?.addEventListener('click', (e) => {
+    const idx = window.__activePipetteIndex;
+    if (typeof idx === 'undefined' || idx === null) return;
+    
+    const rect = pipetteImg.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / rect.width * pipetteImg.naturalWidth);
+    const y = Math.floor((e.clientY - rect.top) / rect.height * pipetteImg.naturalHeight);
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = pipetteImg.naturalWidth;
+    canvas.height = pipetteImg.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(pipetteImg, 0, 0);
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+    const hex = '#' + [pixel[0], pixel[1], pixel[2]].map(v => 
+      v.toString(16).padStart(2, '0')
+    ).join('');
+    
+    // Обновляем цвет в палитре
+    if (window.stringArtApp) {
+      window.stringArtApp.colorAnalyzer.updatePaletteColor(idx, hex);
+    }
+    
+    pipetteOverlay.style.display = 'none';
+    window.__activePipetteIndex = null;
+  });
+});
+</script>
+</body>
+</html>

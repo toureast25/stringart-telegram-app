@@ -287,6 +287,47 @@ class Utils {
     
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
+  // Получение среднего цвета края изображения
+  static getAverageEdgeColor(img, edgePercent = 10) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    ctx.drawImage(img, 0, 0);
+    
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    
+    const edgePixels = Math.floor(Math.min(canvas.width, canvas.height) * edgePercent / 100);
+    
+    let r = 0, g = 0, b = 0, count = 0;
+    
+    // Собираем пиксели с краев изображения
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const isEdge = x < edgePixels || x >= canvas.width - edgePixels || 
+                      y < edgePixels || y >= canvas.height - edgePixels;
+        
+        if (isEdge) {
+          const i = (y * canvas.width + x) * 4;
+          r += data[i];
+          g += data[i + 1];
+          b += data[i + 2];
+          count++;
+        }
+      }
+    }
+    
+    if (count === 0) {
+      return '#ffffff';
+    }
+    
+    r = Math.round(r / count);
+    g = Math.round(g / count);
+    b = Math.round(b / count);
+    
+    return this.rgbToHex(r, g, b);
+  }
 }
 
 // Экспорт для использования в других модулях
