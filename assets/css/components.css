@@ -1,0 +1,228 @@
+/* StringArt Components Styles */
+
+/* Preview Components */
+.preview {
+  display: none;
+  border-top: 1px solid var(--border);
+  background: #0c0f15;
+  padding-bottom: 10px;
+}
+
+.preview.active {
+  display: block;
+}
+
+.preview-label {
+  padding: 10px 16px;
+  font-weight: bold;
+}
+
+.preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  background: #000;
+  max-height: 70dvh;
+}
+
+.second-preview {
+  display: none;
+  border-top: 1px solid var(--border);
+  padding: 10px 16px;
+}
+
+.second-preview.active {
+  display: block;
+}
+
+.second-preview img {
+  width: 100%;
+  height: auto;
+}
+
+/* Settings Components */
+.settings {
+  margin-top: 10px;
+}
+
+.settings label {
+  display: block;
+  margin-top: 8px;
+}
+
+.settings input[type=range] {
+  width: 60%;
+}
+
+.settings input[type=number] {
+  width: 80px;
+  margin-left: 10px;
+}
+
+.settings span {
+  margin-left: 10px;
+}
+
+.method-settings {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+}
+
+/* Color Palette Components */
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.color-item {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0;
+  flex: 0 0 calc((100% - 20px)/3);
+  max-width: calc((100% - 20px)/3);
+}
+
+.color-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+
+.color-code {
+  font-size: 12px;
+  margin-top: 4px;
+  width: 72px;
+  padding: 2px 4px;
+}
+
+.color-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.pipette-btn {
+  padding: 4px 6px;
+  line-height: 1;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Color Maps Components */
+#colorMaps .map-container {
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 calc((100% - 30px)/4);
+  max-width: calc((100% - 30px)/4);
+}
+
+#colorMaps img {
+  width: 100%;
+  height: auto;
+  border: 2px solid var(--border);
+  display: block;
+}
+
+#colorMaps .map-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+/* Mapping Components */
+.mapping-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+.mapping-colors {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mapping-arrow {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.actual-color-item {
+  position: relative;
+}
+
+.remove-color-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff4444;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+#actualMapsContainer img {
+  box-sizing: border-box;
+  flex: 0 0 calc((100% - 20px)/3);
+  max-width: calc((100% - 20px)/3);
+  border: 2px solid var(--border);
+}
+
+/* StringArt Canvas */
+#stringartCanvas {
+  display: block;
+  margin: 0 auto;
+}
+
+/* Pipette Overlay */
+#pipetteOverlay {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  justify-content: center;
+  align-items: center;
+}
+
+#pipetteImg {
+  max-width: 90vw;
+  max-height: 90vh;
+  box-shadow: 0 0 0 4px #fff;
+  cursor: crosshair;
+}
