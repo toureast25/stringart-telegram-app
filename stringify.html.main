@@ -34,11 +34,13 @@
     .settings input[type=range]{width:60%;}
     .settings input[type=number]{width:80px;margin-left:10px;}
     .settings span{margin-left:10px;}
-    .palette {margin-top:10px;}
-    .color-item{display:inline-block;margin:5px;text-align:center;}
+    .palette {display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+    .color-item{box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;margin:0;flex:0 0 calc((100% - 20px)/3);max-width:calc((100% - 20px)/3);}
     .color-circle{width:32px;height:32px;border-radius:50%;border:2px solid #fff;cursor:pointer;}
-    .color-code{font-size:12px;margin-top:4px;}
-    #colorMaps img{max-width:32%;border:2px solid var(--border);}
+    .color-code{font-size:12px;margin-top:4px;width:72px;padding:2px 4px;}
+    .color-controls{display:flex;align-items:center;gap:6px;margin-top:4px;}
+    .pipette-btn{padding:4px 6px;line-height:1;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:6px;cursor:pointer;}
+    #colorMaps img{box-sizing:border-box;flex:0 0 calc((100% - 20px)/3);max-width:calc((100% - 20px)/3);border:2px solid var(--border);}
   </style>
 </head>
 <body>
@@ -113,6 +115,9 @@
           </label>
         </div>
         <div id="palette" class="palette"></div>
+        <div id="pipetteOverlay" style="display:none;position:fixed;z-index:9999;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);justify-content:center;align-items:center;">
+          <img id="pipetteImg" style="max-width:90vw;max-height:90vh;box-shadow:0 0 0 4px #fff;cursor:crosshair;"/>
+        </div>
         <div id="colorMaps" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;"></div>
       </div>
     </section>
@@ -381,22 +386,43 @@ function extractPalette(){
 }
 // Отображает палитру на странице, позволяет менять цвета вручную
 function renderPalette(){
-  paletteDiv.innerHTML='';currentPalette.forEach((col,idx)=>{
+  paletteDiv.innerHTML='';
+  currentPalette.forEach((col,idx)=>{
     const item=document.createElement('div');item.className='color-item';
     const circle=document.createElement('input');circle.type='color';circle.value=col;circle.className='color-circle';
     const code=document.createElement('input');code.type='text';code.value=col;code.className='color-code';
-    // Можно вручную менять цвет через input
+    code.maxLength = 7;
+    // Кнопка-пипетка
+    const pipBtn=document.createElement('button');
+    pipBtn.innerHTML='🖌️';
+    pipBtn.title='Выбрать цвет с изображения';
+    pipBtn.className='pipette-btn';
+    pipBtn.addEventListener('click',function(e){
+      e.stopPropagation();
+      window.__activePipetteIndex = idx;
+      pipetteImg.src = secondImg.src;
+      pipetteOverlay.style.display = 'flex';
+    });
+    // События для circle и code
     circle.addEventListener('input',()=>{
       code.value=circle.value;
       currentPalette[idx]=circle.value;
-      generateColorMaps(); // обновляем карты при изменении цвета
+      generateColorMaps();
     });
     code.addEventListener('input',()=>{
       circle.value=code.value;
       currentPalette[idx]=code.value;
-      generateColorMaps(); // обновляем карты при изменении цвета
+      generateColorMaps();
     });
-    item.appendChild(circle);item.appendChild(code);paletteDiv.appendChild(item);
+    // Строка управления значением и пипеткой
+    const controls=document.createElement('div');
+    controls.className='color-controls';
+    controls.appendChild(code);
+    controls.appendChild(pipBtn);
+    // Сборка
+    item.appendChild(circle);
+    item.appendChild(controls);
+    paletteDiv.appendChild(item);
   });
 }
 // Обновляем палитру при изменении количества цветов, minDeltaE или пропорций
@@ -459,6 +485,45 @@ function generateColorMaps(){
     img.style.border = `4px solid ${currentPalette[index]}`;colorMaps.appendChild(img);
   });
 }
+
+// === Пипетка только для второго изображения ===
+// Получаем ссылку на оверлей и изображение
+const pipetteOverlay = document.getElementById('pipetteOverlay');
+const pipetteImg = document.getElementById('pipetteImg');
+
+// Открытие режима пипетки
+pipetteImg.addEventListener('click', function(e) {
+  if (!secondImg.src) return;
+  pipetteImg.src = secondImg.src;
+  pipetteOverlay.style.display = 'flex';
+});
+// Клик по оверлею вне картинки — закрыть
+pipetteOverlay.addEventListener('click', function(e) {
+  if (e.target === pipetteOverlay) pipetteOverlay.style.display = 'none';
+});
+// Клик по изображению в оверлее — выбор цвета
+pipetteImg.addEventListener('click', function(e) {
+  // Используем window.__activePipetteIndex
+  const idx = window.__activePipetteIndex;
+  if (typeof idx === 'undefined' || idx === null) return;
+  const rect = pipetteImg.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / rect.width * pipetteImg.naturalWidth);
+  const y = Math.floor((e.clientY - rect.top) / rect.height * pipetteImg.naturalHeight);
+  const canvas = document.createElement('canvas');
+  canvas.width = pipetteImg.naturalWidth;
+  canvas.height = pipetteImg.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(pipetteImg, 0, 0);
+  const pixel = ctx.getImageData(x, y, 1, 1).data;
+  const hex = '#' + [pixel[0], pixel[1], pixel[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+  currentPalette[idx] = hex;
+  renderPalette();
+  generateColorMaps();
+  pipetteOverlay.style.display = 'none';
+  window.__activePipetteIndex = null;
+});
+// Удаляем обычный обработчик клика по secondImg (если был)
+secondImg.onclick = null;
 </script>
 </body>
 </html>
