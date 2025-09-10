@@ -21,7 +21,8 @@ class ColorAnalyzer {
       backgroundSettings: document.getElementById('backgroundSettings'),
       bgColorPicker: document.getElementById('bgColorPicker'),
       currentBgColor: document.getElementById('currentBgColor'),
-      bgEdgePercent: document.getElementById('bgEdgePercent')
+      bgEdgePercent: document.getElementById('bgEdgePercent'),
+      autoDetectBgBtn: document.getElementById('autoDetectBgBtn')
     };
     
     this.bindEvents();
@@ -59,6 +60,11 @@ class ColorAnalyzer {
     
     this.elements.bgEdgePercent?.addEventListener('change', () => {
       this.recalculateBackgroundColor();
+    });
+    
+    // Обработчик для кнопки автоматического определения фона
+    this.elements.autoDetectBgBtn?.addEventListener('click', () => {
+      this.autoDetectBackground();
     });
     
     // Обработчики для предустановленных цветов фона
@@ -453,6 +459,27 @@ class ColorAnalyzer {
           this.app.actualColors.syncActualWithCalculated();
         }
       }
+    }
+  }
+  
+  autoDetectBackground() {
+    const previewImg = document.getElementById('previewImg');
+    if (!previewImg || !previewImg.src || !previewImg.complete || !previewImg.naturalWidth) {
+      // Показываем сообщение пользователю, если изображение не загружено
+      if (this.app.telegramAPI) {
+        this.app.telegramAPI.showAlert('Сначала загрузите изображение для автоматического определения цвета фона');
+      } else {
+        alert('Сначала загрузите изображение для автоматического определения цвета фона');
+      }
+      return;
+    }
+    
+    // Выполняем автоматическое определение цвета фона
+    this.recalculateBackgroundColor();
+    
+    // Показываем уведомление об успешном определении
+    if (this.app.telegramAPI) {
+      this.app.telegramAPI.hapticFeedback('light');
     }
   }
   
