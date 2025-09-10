@@ -52,13 +52,19 @@ class ImageProcessor {
       this.applyResolution();
     };
     
-    // Функция для обновления размытия
+    // Функция для обновления размытия с debouncing
+    let blurTimeout;
     const updateBlur = (value) => {
       const blurValue = parseFloat(value) || 0;
       this.elements.blurInput.value = blurValue;
       this.elements.blurRange.value = blurValue;
       console.log('Blur updated to:', blurValue); // Отладочная информация
-      this.applyResolution();
+      
+      // Debouncing для плавности работы
+      clearTimeout(blurTimeout);
+      blurTimeout = setTimeout(() => {
+        this.applyResolution();
+      }, 100); // Задержка 100ms
     };
     
     // Обработчики для настроек разрешения - добавляем множественные события для мобильных
@@ -305,6 +311,11 @@ class ImageProcessor {
       }
       
       // Обновляем второе изображение
+      const newDataURL = this.snapshotCanvas.toDataURL('image/png');
+      
+      // Проверяем, изменилось ли изображение
+      const imageChanged = this.elements.secondImg.src !== newDataURL;
+      
       this.elements.secondImg.onload = () => {
         this.elements.secondPreview.classList.add('active');
         document.getElementById('paletteSection').classList.add('active');
@@ -313,13 +324,22 @@ class ImageProcessor {
         this.app.colorAnalyzer?.extractPalette();
       };
       
-      this.elements.secondImg.src = this.snapshotCanvas.toDataURL('image/png');
+      this.elements.secondImg.src = newDataURL;
       this.elements.secondImg.style.width = '100%';
       
       // НЕ применяем CSS размытие - оно влияет на весь интерфейс
       // Размытие должно быть только в Canvas, а изображение показываем без CSS фильтров
       this.elements.secondImg.style.filter = 'none';
       console.log('Canvas blur applied, no CSS filter used'); // Отладочная информация
+      
+      // ВАЖНО: Принудительно пересчитываем палитру, даже если onload не сработает
+      // Это нужно для случаев, когда изображение уже загружено и onload не вызывается
+      setTimeout(() => {
+        if (this.app.colorAnalyzer) {
+          console.log('Force recalculating palette after blur change');
+          this.app.colorAnalyzer.extractPalette();
+        }
+      }, 100);
     };
     img.src = this.app.state.originalImage;
   }

@@ -136,7 +136,19 @@ class ColorAnalyzer {
   
   extractPalette() {
     const secondImg = document.getElementById('secondImg');
-    if (!secondImg.src) return;
+    if (!secondImg.src) {
+      console.warn('extractPalette: no image source');
+      return;
+    }
+    
+    // Проверяем, что изображение загружено
+    if (!secondImg.complete || !secondImg.naturalWidth) {
+      console.warn('extractPalette: image not ready, retrying...');
+      setTimeout(() => this.extractPalette(), 50);
+      return;
+    }
+    
+    console.log('extractPalette: analyzing image', secondImg.naturalWidth + 'x' + secondImg.naturalHeight);
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -178,6 +190,9 @@ class ColorAnalyzer {
     // Активируем следующие разделы
     document.getElementById('actualColorsSection').classList.add('active');
     document.getElementById('stringartSection').classList.add('active');
+    
+    console.log('extractPalette: completed, palette updated with', palette.length, 'colors');
+    console.log('extractPalette: generated', resultColors.length, 'result colors from', sampleColors.length, 'samples');
   }
   
   // k-means алгоритм кластеризации
