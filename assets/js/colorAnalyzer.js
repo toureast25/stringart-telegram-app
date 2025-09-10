@@ -668,7 +668,8 @@ class ColorAnalyzer {
     cancelBtn.addEventListener('click', onCancel);
     pipetteBtn.addEventListener('click', onPipette);
     
-    modal.style.display = 'block';
+    // Открываем модалку как центрированный фиксированный оверлей
+    modal.style.display = 'flex';
 
     // ==== HSV Picker implementation ====
     const svCtx = svCanvas.getContext('2d');
