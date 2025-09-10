@@ -39,9 +39,20 @@ class StringArtGenerator {
     const size = parseInt(this.elements.canvasSize.value);
     const nails = parseInt(this.elements.nailCount.value);
     
-    // Размеры canvas для отображения (масштаб 1 см = 10 пикселей)
-    const canvasWidth = 310; // 31 см * 10 пикселей/см
-    const canvasHeight = 310;
+    // Вычисляем пропорциональные размеры canvas на основе исходного изображения
+    const maxSize = 310; // максимальный размер в пикселях
+    const aspectRatio = this.app.state.originalHeight / this.app.state.originalWidth;
+    
+    let canvasWidth, canvasHeight;
+    if (aspectRatio > 1) {
+      // Изображение выше чем шире (портрет)
+      canvasHeight = maxSize;
+      canvasWidth = Math.round(maxSize / aspectRatio);
+    } else {
+      // Изображение шире чем выше (пейзаж) или квадрат
+      canvasWidth = maxSize;
+      canvasHeight = Math.round(maxSize * aspectRatio);
+    }
     
     // Настройка canvas
     this.elements.stringartCanvas.width = canvasWidth;
@@ -55,11 +66,11 @@ class StringArtGenerator {
     const centerX = canvasWidth / 2;
     const centerY = canvasHeight / 2;
     
-    // Радиус для отображения изображения (30 см = 300 пикселей)
-    const imageRadius = 150; // 30 см / 2 * 10 пикселей/см
+    // Радиус для отображения изображения (адаптируется к размеру canvas)
+    const imageRadius = Math.min(canvasWidth, canvasHeight) / 2 - 10; // отступ 10px от краев
     
-    // Радиус для отображения полотна (31 см = 310 пикселей)
-    const canvasRadius = 155; // 31 см / 2 * 10 пикселей/см
+    // Радиус для отображения полотна (пропорционально размеру canvas)
+    const canvasRadius = Math.min(canvasWidth, canvasHeight) / 2;
     
     // Рисуем фон полотна (больший размер)
     ctx.fillStyle = '#e0e0e0';
