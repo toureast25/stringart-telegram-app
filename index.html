@@ -12,8 +12,8 @@
   <link rel="manifest" href="manifest.json">
   
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="assets/css/main.css?v=20250910f">
-  <link rel="stylesheet" href="assets/css/components.css?v=20250910f">
+  <link rel="stylesheet" href="assets/css/main.css?v=20250910g">
+  <link rel="stylesheet" href="assets/css/components.css?v=20250910g">
   
   <!-- Meta tags for better SEO and sharing -->
   <meta name="description" content="Create StringArt templates from photos with advanced color analysis and k-means clustering">
@@ -35,8 +35,7 @@
 <div class="container" id="mainContainer">
 <div class="app">
   <header class="app-header">
-    <button id="uploadBtn" class="primary" type="button">Выбрать файл</button>
-    <button id="cameraBtn" type="button">Сделать фото</button>
+    <button id="addMediaBtn" class="primary" type="button">Добавить</button>
     <button id="testImageBtn" type="button">Тестовое изображение</button>
     <button id="resetBtn" type="button" style="display:none">Сброс</button>
   </header>
@@ -51,6 +50,18 @@
       <div id="preview" class="preview">
         <div class="preview-label">1) Исходное изображение</div>
         <img id="previewImg" alt="Предпросмотр"/>
+      </div>
+
+      <!-- Add Media Modal -->
+      <div id="addMediaModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1200;">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg);border-radius:12px;padding:16px;max-width:320px;width:90%;">
+          <div style="font-weight:bold;text-align:center;margin-bottom:12px;">Добавить изображение</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button id="addMediaFromCamera" type="button" style="padding:10px 12px;background:var(--accent);border:none;border-radius:8px;color:#081018;cursor:pointer;">Сделать фото</button>
+            <button id="addMediaFromFile" type="button" style="padding:10px 12px;background:var(--border);border:none;border-radius:8px;color:var(--text);cursor:pointer;">Выбрать из файла</button>
+            <button id="addMediaCancel" type="button" style="padding:10px 12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;">Отмена</button>
+          </div>
+        </div>
       </div>
 
       <!-- Step 2: Image Processing -->

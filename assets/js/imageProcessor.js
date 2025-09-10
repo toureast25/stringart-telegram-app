@@ -255,9 +255,9 @@ class ImageProcessor {
     this.elements.resolutionInput.value = Math.min(width * 0.2, maxWidth);
     this.updatePercent();
     
-    // Показываем все кнопки управления - пользователь должен иметь возможность загрузить свое изображение
-    document.getElementById('uploadBtn').style.display = '';
-    document.getElementById('cameraBtn').style.display = '';
+    // Показываем объединённую кнопку добавления медиа
+    const addBtn = document.getElementById('addMediaBtn');
+    if (addBtn) addBtn.style.display = '';
     document.getElementById('resetBtn').style.display = '';
   }
   
@@ -508,9 +508,9 @@ class ImageProcessor {
     this.elements.blurRange.value = 0;
     this.elements.blurInput.value = 0;
     
-    // Показываем кнопки загрузки
-    document.getElementById('uploadBtn').style.display = '';
-    document.getElementById('cameraBtn').style.display = '';
+    // Показываем объединённую кнопку добавления
+    const addBtn = document.getElementById('addMediaBtn');
+    if (addBtn) addBtn.style.display = '';
     document.getElementById('testImageBtn').style.display = '';
     document.getElementById('resetBtn').style.display = 'none';
     

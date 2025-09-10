@@ -70,8 +70,7 @@ class StringArtApp {
   initializeUI() {
     // Получение элементов DOM
     this.elements = {
-      uploadBtn: document.getElementById('uploadBtn'),
-      cameraBtn: document.getElementById('cameraBtn'),
+      addMediaBtn: document.getElementById('addMediaBtn'),
       testImageBtn: document.getElementById('testImageBtn'),
       resetBtn: document.getElementById('resetBtn'),
       previewImg: document.getElementById('previewImg'),
@@ -84,13 +83,35 @@ class StringArtApp {
   }
   
   bindEvents() {
-    // Обработчики для загрузки файлов
-    this.elements.uploadBtn?.addEventListener('click', () => {
-      this.imageProcessor.openFileDialog();
-    });
-    
-    this.elements.cameraBtn?.addEventListener('click', () => {
-      this.imageProcessor.openCamera();
+    // Обработчик для объединенной кнопки добавления
+    this.elements.addMediaBtn?.addEventListener('click', () => {
+      const modal = document.getElementById('addMediaModal');
+      const fromCam = document.getElementById('addMediaFromCamera');
+      const fromFile = document.getElementById('addMediaFromFile');
+      const cancel = document.getElementById('addMediaCancel');
+      if (!modal || !fromCam || !fromFile || !cancel) {
+        // Fallback: открыть файловый диалог
+        this.imageProcessor.openFileDialog();
+        return;
+      }
+      modal.style.display = 'block';
+      const close = () => { modal.style.display = 'none'; cleanup(); };
+      const onCam = () => { close(); this.imageProcessor.openCamera(); };
+      const onFile = () => { close(); this.imageProcessor.openFileDialog(); };
+      const onCancel = () => { close(); };
+      function cleanup() {
+        fromCam.removeEventListener('click', onCam);
+        fromFile.removeEventListener('click', onFile);
+        cancel.removeEventListener('click', onCancel);
+        modal.removeEventListener('click', onBackdrop);
+      }
+      function onBackdrop(e) {
+        if (e.target === modal) close();
+      }
+      fromCam.addEventListener('click', onCam);
+      fromFile.addEventListener('click', onFile);
+      cancel.addEventListener('click', onCancel);
+      modal.addEventListener('click', onBackdrop);
     });
     
     this.elements.testImageBtn?.addEventListener('click', () => {
