@@ -167,6 +167,37 @@
             </div>
           </div>
         </div>
+
+        <!-- Color Editor Modal (RGB + HEX + Pipette) -->
+        <div id="colorEditorModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1001;">
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg);border-radius:12px;padding:16px;max-width:360px;width:92%;color:var(--text);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div style="font-weight:bold;">Редактор цвета</div>
+              <div id="colorEditorPreview" style="width:28px;height:28px;border-radius:6px;border:2px solid #fff;background:#ffffff;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+              <label style="display:flex;align-items:center;gap:8px;">HEX
+                <input id="colorEditorHex" type="text" maxlength="7" placeholder="#ffffff" style="flex:1;padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);">
+              </label>
+              <button id="colorEditorPipette" type="button" style="padding:8px 12px;background:var(--accent);border:none;border-radius:6px;color:#081018;cursor:pointer;">Пипетка</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+              <label style="display:flex;flex-direction:column;gap:6px;">R
+                <input id="colorEditorR" type="number" min="0" max="255" value="255" style="padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;">G
+                <input id="colorEditorG" type="number" min="0" max="255" value="255" style="padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;">B
+                <input id="colorEditorB" type="number" min="0" max="255" value="255" style="padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);">
+              </label>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+              <button id="colorEditorCancel" type="button" style="padding:8px 12px;background:var(--border);border:none;border-radius:6px;color:var(--text);cursor:pointer;">Отмена</button>
+              <button id="colorEditorOk" type="button" style="padding:8px 12px;background:var(--accent);border:none;border-radius:6px;color:#081018;cursor:pointer;">Готово</button>
+            </div>
+          </div>
+        </div>
         
         <!-- Color Maps -->
         <div id="colorMaps" class="maps-container"></div>
@@ -282,8 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Клик по изображению в оверлее — выбор цвета
   pipetteImg?.addEventListener('click', (e) => {
     const idx = window.__activePipetteIndex;
-    if (typeof idx === 'undefined' || idx === null) return;
-    
     const rect = pipetteImg.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / rect.width * pipetteImg.naturalWidth);
     const y = Math.floor((e.clientY - rect.top) / rect.height * pipetteImg.naturalHeight);
@@ -298,14 +327,14 @@ document.addEventListener('DOMContentLoaded', () => {
       v.toString(16).padStart(2, '0')
     ).join('');
     
-    // Обновляем цвет в палитре
-    if (window.stringArtApp && window.stringArtApp.colorAnalyzer) {
+    // Если задан глобальный колбэк редактора, вызываем его
+    if (typeof window.__onPipettePick === 'function') {
+      try { window.__onPipettePick(hex); } catch (_) {}
+      window.__onPipettePick = null;
+    } else if (window.stringArtApp && window.stringArtApp.colorAnalyzer && typeof idx === 'number') {
+      // Fallback: обновляем расчётную палитру, если индекс задан
       window.stringArtApp.colorAnalyzer.updatePaletteColor(idx, hex);
-      
-      // Обновляем отображение палитры
       window.stringArtApp.colorAnalyzer.renderPalette();
-      
-      // Обновляем сопоставление с фактической палитрой
       if (window.stringArtApp.actualColors && 
           document.getElementById('syncWithCalculated') && 
           document.getElementById('syncWithCalculated').checked) {

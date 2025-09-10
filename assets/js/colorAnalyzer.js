@@ -525,44 +525,18 @@ class ColorAnalyzer {
       
       // Убираем дополнительные кнопки пипеток по просьбе пользователя
       
-      // События для изменения цвета
-      if (isTelegram) {
-        // Для Telegram используем палитру цветов
-        circle.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Telegram: клик по кружку, показываем палитру');
-          this.showTelegramColorPicker(idx, color, circle, code);
+      // События для изменения цвета — открываем единый RGB-редактор
+      circle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openColorEditor(color, (selectedColor) => {
+          if (selectedColor) {
+            circle.style.backgroundColor = selectedColor;
+            code.value = selectedColor;
+            this.updatePaletteColor(idx, selectedColor);
+          }
         });
-      } else if (colorInput) {
-        // Для десктопа используем стандартный color input
-        circle.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Десктоп: клик по кружку, открываем color picker');
-          colorInput.click();
-        });
-        
-        colorInput.addEventListener('input', () => {
-          circle.style.backgroundColor = colorInput.value;
-          code.value = colorInput.value;
-          this.updatePaletteColor(idx, colorInput.value);
-        });
-      } else {
-        // Для мобильных (не Telegram) используем палитру цветов
-        circle.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Мобильный: клик по кружку, показываем палитру');
-          this.showColorPalette((selectedColor) => {
-            if (selectedColor) {
-              circle.style.backgroundColor = selectedColor;
-              code.value = selectedColor;
-              this.updatePaletteColor(idx, selectedColor);
-            }
-          });
-        });
-      }
+      });
       
       // Общий обработчик для текстового поля
       code.addEventListener('input', () => {
@@ -590,6 +564,92 @@ class ColorAnalyzer {
     });
   }
   
+  // Единый редактор цвета (HEX/RGB + пипетка)
+  openColorEditor(currentColor, onApply) {
+    const modal = document.getElementById('colorEditorModal');
+    const hexInput = document.getElementById('colorEditorHex');
+    const rInput = document.getElementById('colorEditorR');
+    const gInput = document.getElementById('colorEditorG');
+    const bInput = document.getElementById('colorEditorB');
+    const okBtn = document.getElementById('colorEditorOk');
+    const cancelBtn = document.getElementById('colorEditorCancel');
+    const pipetteBtn = document.getElementById('colorEditorPipette');
+    const preview = document.getElementById('colorEditorPreview');
+    
+    if (!modal || !hexInput || !rInput || !gInput || !bInput || !okBtn || !cancelBtn || !pipetteBtn || !preview) {
+      // Fallback — если по какой-то причине нет редактора, используем палитру
+      return this.showColorPalette(onApply);
+    }
+    
+    const setFromHex = (hex) => {
+      if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return;
+      const [r, g, b] = Utils.hexToRgb(hex);
+      hexInput.value = hex.toLowerCase();
+      rInput.value = r;
+      gInput.value = g;
+      bInput.value = b;
+      preview.style.background = hex;
+      currentHex = hex.toLowerCase();
+    };
+    
+    const clamp255 = (n) => Math.max(0, Math.min(255, parseInt(n || 0)));
+    const setFromRgb = () => {
+      const r = clamp255(rInput.value);
+      const g = clamp255(gInput.value);
+      const b = clamp255(bInput.value);
+      const hex = Utils.rgbToHex(r, g, b);
+      hexInput.value = hex;
+      preview.style.background = hex;
+      currentHex = hex;
+    };
+    
+    let currentHex = currentColor && /^#[0-9A-Fa-f]{6}$/.test(currentColor) ? currentColor : '#ffffff';
+    setFromHex(currentHex);
+    
+    const onHexInput = () => setFromHex(hexInput.value.trim());
+    const onR = () => setFromRgb();
+    const onG = () => setFromRgb();
+    const onB = () => setFromRgb();
+    const onOk = () => { close(); onApply && onApply(currentHex); };
+    const onCancel = () => close();
+    const onPipette = () => {
+      const secondImg = document.getElementById('secondImg');
+      const overlay = document.getElementById('pipetteOverlay');
+      const pipetteImg = document.getElementById('pipetteImg');
+      if (!secondImg || !secondImg.src) {
+        if (this.app.telegramAPI) this.app.telegramAPI.showAlert('Сначала подготовьте изображение во втором шаге');
+        else alert('Сначала подготовьте изображение во втором шаге');
+        return;
+      }
+      window.__onPipettePick = (hex) => {
+        try { setFromHex(hex); } catch (_) {}
+      };
+      pipetteImg.src = secondImg.src;
+      overlay.style.display = 'flex';
+    };
+    
+    const close = () => {
+      modal.style.display = 'none';
+      hexInput.removeEventListener('input', onHexInput);
+      rInput.removeEventListener('input', onR);
+      gInput.removeEventListener('input', onG);
+      bInput.removeEventListener('input', onB);
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      pipetteBtn.removeEventListener('click', onPipette);
+    };
+    
+    hexInput.addEventListener('input', onHexInput);
+    rInput.addEventListener('input', onR);
+    gInput.addEventListener('input', onG);
+    bInput.addEventListener('input', onB);
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    pipetteBtn.addEventListener('click', onPipette);
+    
+    modal.style.display = 'block';
+  }
+
   // Метод для выбора цвета через палитру
   showTelegramColorPicker(idx, currentColor, circle, code) {
     this.showColorPalette((selectedColor) => {
