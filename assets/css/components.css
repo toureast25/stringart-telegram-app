@@ -31,6 +31,12 @@
   box-sizing: border-box;
 }
 
+/* Prevent horizontal overflow on core containers */
+.preview, .second-preview, .palette, .maps-container {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 .second-preview {
   display: none;
   border-top: 1px solid var(--border);
@@ -244,6 +250,8 @@ input[type="color"][style*="display: none"] {
   padding: 0 16px;
   box-sizing: border-box;
   justify-content: center;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* Адаптивные контейнеры масок */
