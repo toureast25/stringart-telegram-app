@@ -362,3 +362,62 @@ button, .pipette-btn {
 button:active, .pipette-btn:active {
   transform: scale(0.98);
 }
+
+/* Мобильные оптимизации для предотвращения проблем с viewport */
+@media screen and (max-width: 768px) {
+  body {
+    /* Предотвращаем проблемы с viewport на мобильных */
+    position: relative;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Ограничиваем размеры изображений на мобильных */
+  #secondImg {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+  }
+  
+  /* Оптимизация canvas для мобильных */
+  #stringartCanvas {
+    max-width: 100%;
+    max-height: 60vh;
+  }
+  
+  /* Стабилизация контейнеров на мобильных */
+  .preview, .second-preview {
+    transform: translateZ(0); /* Включаем аппаратное ускорение */
+    backface-visibility: hidden;
+    will-change: scroll-position;
+  }
+  
+  /* Оптимизация прокрутки */
+  .color-maps, .actual-colors {
+    contain: layout style paint;
+    transform: translateZ(0);
+  }
+  
+  /* Предотвращение исчезновения элементов при прокрутке */
+  .loading-overlay {
+    position: fixed;
+    transform: translateZ(0);
+  }
+}
+
+/* Дополнительные оптимизации для очень маленьких экранов */
+@media screen and (max-width: 480px) {
+  /* Еще более жесткие ограничения для слабых устройств */
+  #secondImg {
+    max-height: 50vh;
+  }
+  
+  #stringartCanvas {
+    max-height: 40vh;
+  }
+  
+  /* Уменьшаем сложность анимаций на слабых устройствах */
+  .loading-spinner {
+    animation-duration: 1.5s; /* Замедляем анимацию */
+  }
+}

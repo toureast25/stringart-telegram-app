@@ -235,10 +235,18 @@ class ImageProcessor {
   }
   
   setupControls(width) {
-    this.elements.resolutionRange.max = width;
-    this.elements.resolutionInput.max = width;
-    this.elements.resolutionRange.value = width * 0.2;
-    this.elements.resolutionInput.value = width * 0.2;
+    // Ограничиваем максимальное разрешение для мобильных устройств
+    let maxWidth = width;
+    if (this.isMobileDevice()) {
+      // На мобильных ограничиваем до 600px для предотвращения проблем с памятью
+      maxWidth = Math.min(width, 600);
+      console.log('Mobile device detected, limiting max resolution to', maxWidth);
+    }
+    
+    this.elements.resolutionRange.max = maxWidth;
+    this.elements.resolutionInput.max = maxWidth;
+    this.elements.resolutionRange.value = Math.min(width * 0.2, maxWidth);
+    this.elements.resolutionInput.value = Math.min(width * 0.2, maxWidth);
     this.updatePercent();
     
     // Показываем все кнопки управления - пользователь должен иметь возможность загрузить свое изображение
@@ -257,9 +265,19 @@ class ImageProcessor {
     
     const img = new Image();
     img.onload = () => {
+      // Проверяем размер изображения для предотвращения проблем с памятью на мобильных
       const newWidth = parseInt(this.elements.resolutionInput.value);
+      const newHeight = this.app.state.originalHeight * (newWidth / this.app.state.originalWidth);
+      const imageSize = newWidth * newHeight;
+      
+      if (this.isMobileDevice() && imageSize > 400000) { // > 400k пикселей
+        console.warn('Large image size on mobile device:', imageSize);
+        if (this.app.telegramAPI) {
+          this.app.telegramAPI.showAlert('Внимание: большое разрешение может замедлить работу на мобильном устройстве');
+        }
+      }
+      
       const scale = newWidth / this.app.state.originalWidth;
-      const newHeight = this.app.state.originalHeight * scale;
       
       const ctx = this.snapshotCanvas.getContext('2d');
       this.snapshotCanvas.width = newWidth;

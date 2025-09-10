@@ -225,21 +225,54 @@ class ColorAnalyzer {
     const ctx = canvas.getContext('2d');
     canvas.width = secondImg.naturalWidth;
     canvas.height = secondImg.naturalHeight;
-    ctx.drawImage(secondImg, 0, 0);
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    
+    try {
+      ctx.drawImage(secondImg, 0, 0);
+      var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    } catch (error) {
+      console.error('Memory error during image processing:', error);
+      this.hidePaletteLoading();
+      
+      if (this.app.telegramAPI) {
+        this.app.telegramAPI.showAlert('Ошибка: недостаточно памяти для обработки изображения. Попробуйте уменьшить разрешение.');
+      } else {
+        alert('Ошибка: недостаточно памяти для обработки изображения. Попробуйте уменьшить разрешение.');
+      }
+      return;
+    }
     
     // Собираем цвета из изображения (оптимизированное семплирование)
     let sampleColors = [];
-    const step = this.isMobileDevice() ? 4 * 8 : 4 * 6; // Меньше семплов на мобильных
+    
+    // Более агрессивное ограничение для мобильных при больших разрешениях
+    const imageSize = canvas.width * canvas.height;
+    let step;
+    
+    if (this.isMobileDevice()) {
+      // На мобильных используем адаптивный шаг в зависимости от размера изображения
+      if (imageSize > 300000) { // Большие изображения (> 300k пикселей)
+        step = 4 * 16; // Очень большой шаг
+      } else if (imageSize > 150000) { // Средние изображения
+        step = 4 * 12; 
+      } else {
+        step = 4 * 8; // Маленькие изображения
+      }
+    } else {
+      step = 4 * 6; // Десктоп
+    }
+    
     for (let i = 0; i < data.length; i += step) {
       sampleColors.push([data[i], data[i + 1], data[i + 2]]);
     }
     
-    // Ограничиваем количество семплов для производительности
-    if (sampleColors.length > 5000) {
-      const ratio = Math.floor(sampleColors.length / 5000);
+    // Более жесткие ограничения для мобильных
+    const maxSamples = this.isMobileDevice() ? 3000 : 5000;
+    if (sampleColors.length > maxSamples) {
+      const ratio = Math.floor(sampleColors.length / maxSamples);
       sampleColors = sampleColors.filter((_, index) => index % ratio === 0);
     }
+    
+    console.log(`Image size: ${imageSize}, samples: ${sampleColors.length}, step: ${step}`);
     
     const method = this.elements.clusteringMethod.value;
     let resultColors = [];
