@@ -289,12 +289,13 @@ class ImageProcessor {
             console.log('Canvas blur applied in Telegram Mini App');
           }
         } else {
-          // Fallback для старых браузеров - рисуем без размытия, но применим CSS
+          // Fallback для старых браузеров - используем программное размытие
+          console.warn('Canvas filter not supported, using programmatic blur');
           ctx.drawImage(img, 0, 0, this.snapshotCanvas.width, this.snapshotCanvas.height);
-          console.warn('Canvas filter not supported, using CSS fallback');
+          this.applyProgrammaticBlur(ctx, this.snapshotCanvas.width, this.snapshotCanvas.height, blurValue);
           
           if (window.Telegram?.WebApp) {
-            console.warn('Canvas filter not supported in Telegram Mini App, using CSS fallback');
+            console.warn('Canvas filter not supported in Telegram Mini App, using programmatic blur');
           }
         }
       } else {
@@ -315,36 +316,10 @@ class ImageProcessor {
       this.elements.secondImg.src = this.snapshotCanvas.toDataURL('image/png');
       this.elements.secondImg.style.width = '100%';
       
-      // Применяем CSS размытие как дополнительный fallback
-      if (blurValue > 0) {
-        const cssFilter = `blur(${blurValue}px)`;
-        this.elements.secondImg.style.filter = cssFilter;
-        console.log('Applied CSS filter:', cssFilter); // Отладочная информация
-        
-        // Проверяем, применился ли CSS фильтр в Telegram
-        if (window.Telegram?.WebApp) {
-          setTimeout(() => {
-            const appliedFilter = getComputedStyle(this.elements.secondImg).filter;
-            console.log('Computed CSS filter in Telegram:', appliedFilter);
-            
-            if (appliedFilter === 'none' || !appliedFilter.includes('blur')) {
-              console.warn('CSS blur filter not applied in Telegram Mini App');
-              // Можно показать уведомление пользователю
-              if (this.app.telegramAPI) {
-                this.app.telegramAPI.hapticFeedback('error');
-              }
-            } else {
-              console.log('CSS blur successfully applied in Telegram Mini App');
-              if (this.app.telegramAPI) {
-                this.app.telegramAPI.hapticFeedback('light');
-              }
-            }
-          }, 100);
-        }
-      } else {
-        this.elements.secondImg.style.filter = 'none';
-        console.log('Removed CSS filter'); // Отладочная информация
-      }
+      // НЕ применяем CSS размытие - оно влияет на весь интерфейс
+      // Размытие должно быть только в Canvas, а изображение показываем без CSS фильтров
+      this.elements.secondImg.style.filter = 'none';
+      console.log('Canvas blur applied, no CSS filter used'); // Отладочная информация
     };
     img.src = this.app.state.originalImage;
   }
@@ -383,6 +358,67 @@ class ImageProcessor {
     this.app.setBackgroundColor(bgColor);
   }
   
+  applyProgrammaticBlur(ctx, width, height, blurRadius) {
+    // Простое программное размытие методом box blur
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    const blurredData = new Uint8ClampedArray(data);
+    
+    const radius = Math.round(blurRadius);
+    if (radius <= 0) return;
+    
+    // Горизонтальный проход
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let r = 0, g = 0, b = 0, a = 0, count = 0;
+        
+        for (let dx = -radius; dx <= radius; dx++) {
+          const nx = Math.max(0, Math.min(width - 1, x + dx));
+          const index = (y * width + nx) * 4;
+          r += data[index];
+          g += data[index + 1];
+          b += data[index + 2];
+          a += data[index + 3];
+          count++;
+        }
+        
+        const index = (y * width + x) * 4;
+        blurredData[index] = r / count;
+        blurredData[index + 1] = g / count;
+        blurredData[index + 2] = b / count;
+        blurredData[index + 3] = a / count;
+      }
+    }
+    
+    // Вертикальный проход
+    const finalData = new Uint8ClampedArray(blurredData);
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < height; y++) {
+        let r = 0, g = 0, b = 0, a = 0, count = 0;
+        
+        for (let dy = -radius; dy <= radius; dy++) {
+          const ny = Math.max(0, Math.min(height - 1, y + dy));
+          const index = (ny * width + x) * 4;
+          r += blurredData[index];
+          g += blurredData[index + 1];
+          b += blurredData[index + 2];
+          a += blurredData[index + 3];
+          count++;
+        }
+        
+        const index = (y * width + x) * 4;
+        finalData[index] = r / count;
+        finalData[index + 1] = g / count;
+        finalData[index + 2] = b / count;
+        finalData[index + 3] = a / count;
+      }
+    }
+    
+    const finalImageData = new ImageData(finalData, width, height);
+    ctx.putImageData(finalImageData, 0, 0);
+    console.log('Programmatic blur applied with radius:', radius);
+  }
+
   testBlurFunctionality() {
     if (!this.app.state.originalImage) {
       const message = 'Сначала загрузите изображение для тестирования размытия';
@@ -407,7 +443,7 @@ class ImageProcessor {
     this.applyResolution();
     
     // Показываем уведомление
-    const message = `Тест размытия запущен! Проверьте консоль для отладочной информации. Размытие: ${testBlurValue}px`;
+    const message = `Тест размытия запущен! Теперь размытие применяется только к изображению, не к интерфейсу. Размытие: ${testBlurValue}px`;
     if (this.app.telegramAPI) {
       this.app.telegramAPI.showAlert(message);
       this.app.telegramAPI.hapticFeedback('medium');
