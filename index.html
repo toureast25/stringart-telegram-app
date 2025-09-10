@@ -12,8 +12,8 @@
   <link rel="manifest" href="manifest.json">
   
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="assets/css/main.css?v=20250910g">
-  <link rel="stylesheet" href="assets/css/components.css?v=20250910g">
+  <link rel="stylesheet" href="assets/css/main.css?v=20250910h">
+  <link rel="stylesheet" href="assets/css/components.css?v=20250910h">
   
   <!-- Meta tags for better SEO and sharing -->
   <meta name="description" content="Create StringArt templates from photos with advanced color analysis and k-means clustering">
@@ -102,7 +102,11 @@
             <div class="bg-color-preset" style="width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #fff;cursor:pointer;display:inline-block;margin-right:8px;" data-bg="#ffffff" title="Белый"></div>
             <div class="bg-color-preset" style="width:24px;height:24px;border-radius:50%;background:#000;border:2px solid #fff;cursor:pointer;display:inline-block;margin-right:8px;" data-bg="#000000" title="Чёрный"></div>
             <div class="bg-color-preset" style="width:24px;height:24px;border-radius:50%;background:#888;border:2px solid #fff;cursor:pointer;display:inline-block;margin-right:8px;" data-bg="#888888" title="Серый"></div>
-            <div id="bgColorDisplay" style="width:24px;height:24px;border-radius:50%;background:#ffffff;border:2px solid #fff;cursor:pointer;display:inline-block;"></div>
+            <div id="bgColorDisplay" style="width:24px;height:24px;border-radius:50%;background:#ffffff;border:2px solid transparent;cursor:pointer;display:inline-block;position:relative;">
+              <div style="position:absolute;inset:-3px;border-radius:50%;padding:2px;background:conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+                          -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+                          -webkit-mask-composite: xor; mask-composite: exclude;"></div>
+            </div>
             <input type="color" id="bgColorPicker" value="#ffffff" title="Выбрать цвет" style="display:none;">
             <button type="button" id="autoDetectBgBtn" class="pipette-btn" title="Автоматически определить цвет фона по краям изображения" style="margin-left:8px;">Авто</button>
             <span id="currentBgColor" style="margin-left:10px;">#ffffff</span>

@@ -95,7 +95,13 @@ class ColorAnalyzer {
     // Обработчики для настроек фона
     const bgColorDisplay = document.getElementById('bgColorDisplay');
     bgColorDisplay?.addEventListener('click', () => {
-      this.elements.bgColorPicker?.click();
+      // Открываем единый редактор цвета как в других разделах
+      const current = this.app.state.backgroundColor || '#ffffff';
+      this.openColorEditor(current, (selected) => {
+        if (selected) {
+          this.setBackgroundColorAndUpdate(selected);
+        }
+      });
     });
     
     this.elements.bgColorPicker?.addEventListener('input', (e) => {
