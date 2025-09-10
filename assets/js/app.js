@@ -41,8 +41,8 @@ class StringArtApp {
       // Инициализация интерфейса метода кластеризации
       this.colorAnalyzer.updateMethodInterface();
       
-      // Загрузка тестового изображения
-      this.loadDefaultImage();
+      // НЕ загружаем тестовое изображение автоматически - пользователь сам выберет
+      // this.loadDefaultImage();
       
       console.log('StringArt App initialized successfully');
     } catch (error) {
@@ -55,6 +55,7 @@ class StringArtApp {
     this.elements = {
       uploadBtn: document.getElementById('uploadBtn'),
       cameraBtn: document.getElementById('cameraBtn'),
+      testImageBtn: document.getElementById('testImageBtn'),
       resetBtn: document.getElementById('resetBtn'),
       previewImg: document.getElementById('previewImg'),
       secondImg: document.getElementById('secondImg'),
@@ -73,6 +74,10 @@ class StringArtApp {
     
     this.elements.cameraBtn?.addEventListener('click', () => {
       this.imageProcessor.openCamera();
+    });
+    
+    this.elements.testImageBtn?.addEventListener('click', () => {
+      this.loadDefaultImage();
     });
     
     this.elements.resetBtn?.addEventListener('click', () => {
@@ -114,8 +119,8 @@ class StringArtApp {
     this.actualColors.reset();
     this.stringartGenerator.reset();
     
-    // Загружаем тестовое изображение заново
-    this.loadDefaultImage();
+    // НЕ загружаем тестовое изображение автоматически - пользователь сам выберет
+    // this.loadDefaultImage();
   }
   
   // Методы для обновления состояния

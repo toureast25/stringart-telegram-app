@@ -193,9 +193,9 @@ class ImageProcessor {
     this.elements.resolutionInput.value = width * 0.2;
     this.updatePercent();
     
-    // Показываем кнопки управления
-    document.getElementById('uploadBtn').style.display = 'none';
-    document.getElementById('cameraBtn').style.display = 'none';
+    // Показываем все кнопки управления - пользователь должен иметь возможность загрузить свое изображение
+    document.getElementById('uploadBtn').style.display = '';
+    document.getElementById('cameraBtn').style.display = '';
     document.getElementById('resetBtn').style.display = '';
   }
   
@@ -267,6 +267,7 @@ class ImageProcessor {
     // Показываем кнопки загрузки
     document.getElementById('uploadBtn').style.display = '';
     document.getElementById('cameraBtn').style.display = '';
+    document.getElementById('testImageBtn').style.display = '';
     document.getElementById('resetBtn').style.display = 'none';
     
     // Закрываем камеру если открыта
