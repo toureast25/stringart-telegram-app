@@ -1106,9 +1106,15 @@ class ColorAnalyzer {
   }
   
   updateBackgroundDisplay(color) {
+    // Обновляем текст HEX без заливки фоном
     if (this.elements.currentBgColor) {
       this.elements.currentBgColor.textContent = color;
-      this.elements.currentBgColor.style.background = color;
+      this.elements.currentBgColor.style.background = '';
+    }
+    // Обновляем цвет в кастомном кружке
+    const bgColorDisplay = document.getElementById('bgColorDisplay');
+    if (bgColorDisplay) {
+      bgColorDisplay.style.background = color;
     }
     
     if (this.elements.bgColorPicker) {
