@@ -36,26 +36,30 @@ html, body, .container, .app {
 
 header.app-header {
   display: flex;
-  gap: 6px;
-  padding: 8px;
+  gap: clamp(2px, 1vw, 8px);
+  padding: clamp(4px, 1.5vw, 10px);
   background: var(--card);
   border-bottom: 1px solid var(--border);
   flex-wrap: nowrap; /* keep in one line */
   width: 100%;
   box-sizing: border-box;
+  align-items: stretch;
 }
 
 header.app-header button {
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
-  padding: 6px 8px;
+  padding: clamp(6px, 1.2vw, 8px) clamp(6px, 1.8vw, 10px);
   border-radius: 10px;
   font-weight: 600;
-  font-size: clamp(11px, 2.8vw, 13px);
+  font-size: clamp(9px, 2.6vw, 13px);
   cursor: pointer;
   white-space: nowrap; /* keep text on one line */
-  min-width: 0;
+  min-width: 0; /* allow flex shrink */
+  flex: 1 1 0; /* equal flexible widths */
+  overflow: hidden;
+  text-overflow: ellipsis; /* truncate very long labels on tiny screens */
 }
 
 header.app-header button.primary {

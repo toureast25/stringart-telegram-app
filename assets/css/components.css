@@ -539,8 +539,8 @@ button:active, .pipette-btn:active {
   
   /* Исправляем кнопки на мобильном - добавляем отступы от краев */
   header.app-header {
-    gap: 6px;
-    padding: 8px;
+    gap: clamp(2px, 1vw, 6px);
+    padding: clamp(4px, 1.5vw, 8px);
   }
   
   /* Уменьшаем сложность анимаций на слабых устройствах */
