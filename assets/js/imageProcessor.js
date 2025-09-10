@@ -62,7 +62,7 @@ class ImageProcessor {
       clearTimeout(blurTimeout);
       blurTimeout = setTimeout(() => {
         this.applyResolution();
-      }, 17); // Задержка 17ms
+      }, 12); // Задержка 12ms
     };
     
     // Обработчики для настроек разрешения - добавляем множественные события для мобильных
@@ -238,9 +238,15 @@ class ImageProcessor {
     // Ограничиваем максимальное разрешение для мобильных устройств
     let maxWidth = width;
     if (this.isMobileDevice()) {
-      // На мобильных ограничиваем до 600px для предотвращения проблем с памятью
-      maxWidth = Math.min(width, 600);
+      // На мобильных ограничиваем до 400px для максимальной стабильности
+      maxWidth = Math.min(width, 400);
       console.log('Mobile device detected, limiting max resolution to', maxWidth);
+      
+      // Дополнительно ограничиваем для Telegram
+      if (this.isTelegramWebApp()) {
+        maxWidth = Math.min(maxWidth, 350);
+        console.log('Telegram WebApp detected, further limiting to', maxWidth);
+      }
     }
     
     this.elements.resolutionRange.max = maxWidth;
@@ -352,14 +358,14 @@ class ImageProcessor {
         if (this.app.colorAnalyzer) {
           this.app.colorAnalyzer.extractPalette();
         }
-      }, 17);
+      }, 12);
       
       // Дополнительная попытка через больший интервал для мобильных устройств
       setTimeout(() => {
         if (this.app.colorAnalyzer && this.elements.secondImg.complete) {
           this.app.colorAnalyzer.extractPalette();
         }
-      }, 52);
+      }, 36);
       
       // Специальная обработка для Telegram WebApp - еще более агрессивный пересчет
       if (this.isTelegramWebApp()) {
@@ -372,7 +378,7 @@ class ImageProcessor {
               this.app.actualColors.update();
             }
           }
-        }, 87);
+        }, 61);
       }
     };
     img.src = this.app.state.originalImage;

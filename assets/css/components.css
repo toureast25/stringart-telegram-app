@@ -365,11 +365,29 @@ button:active, .pipette-btn:active {
 
 /* Мобильные оптимизации для предотвращения проблем с viewport */
 @media screen and (max-width: 768px) {
+  html {
+    /* Принудительно фиксируем высоту */
+    height: 100%;
+    overflow: hidden;
+  }
+  
   body {
     /* Предотвращаем проблемы с viewport на мобильных */
-    position: relative;
-    overflow-x: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
     -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Создаем скроллируемый контейнер */
+  .container {
+    height: 100vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
   }
   
   /* Ограничиваем размеры изображений на мобильных */

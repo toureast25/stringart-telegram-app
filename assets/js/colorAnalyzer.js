@@ -50,7 +50,7 @@ class ColorAnalyzer {
         requestAnimationFrame(() => {
           this.extractPalette();
         });
-      }, 52); // 52ms задержка для тяжелых операций
+      }, 36); // 36ms задержка для тяжелых операций
     };
     
     let tonesTimeout;
@@ -60,7 +60,7 @@ class ColorAnalyzer {
         requestAnimationFrame(() => {
           this.handleTonesCountChange();
         });
-      }, 35); // 35ms для средних операций
+      }, 24); // 24ms для средних операций
     };
     
     // Обработчики для метода кластеризации
@@ -89,7 +89,7 @@ class ColorAnalyzer {
       clearTimeout(bgTimeout);
       bgTimeout = setTimeout(() => {
         this.recalculateBackgroundColor();
-      }, 35);
+      }, 24);
     };
     
     // Обработчики для настроек фона
@@ -249,13 +249,15 @@ class ColorAnalyzer {
     let step;
     
     if (this.isMobileDevice()) {
-      // На мобильных используем адаптивный шаг в зависимости от размера изображения
-      if (imageSize > 300000) { // Большие изображения (> 300k пикселей)
-        step = 4 * 16; // Очень большой шаг
-      } else if (imageSize > 150000) { // Средние изображения
-        step = 4 * 12; 
+      // На мобильных используем еще более агрессивный шаг
+      if (imageSize > 200000) { // Большие изображения (> 200k пикселей)
+        step = 4 * 24; // Экстремально большой шаг
+      } else if (imageSize > 100000) { // Средние изображения
+        step = 4 * 16; 
+      } else if (imageSize > 50000) { // Маленькие изображения
+        step = 4 * 12;
       } else {
-        step = 4 * 8; // Маленькие изображения
+        step = 4 * 8; // Очень маленькие
       }
     } else {
       step = 4 * 6; // Десктоп
@@ -265,8 +267,8 @@ class ColorAnalyzer {
       sampleColors.push([data[i], data[i + 1], data[i + 2]]);
     }
     
-    // Более жесткие ограничения для мобильных
-    const maxSamples = this.isMobileDevice() ? 3000 : 5000;
+    // Еще более жесткие ограничения для мобильных
+    const maxSamples = this.isMobileDevice() ? 2000 : 5000;
     if (sampleColors.length > maxSamples) {
       const ratio = Math.floor(sampleColors.length / maxSamples);
       sampleColors = sampleColors.filter((_, index) => index % ratio === 0);
