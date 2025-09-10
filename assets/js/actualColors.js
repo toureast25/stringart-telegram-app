@@ -152,27 +152,30 @@ class ActualColors {
       this.elements.actualPaletteDiv.appendChild(item);
     });
     
-    // Принудительное обновление отображения для мобильных
+    // Принудительное обновление отображения для всех устройств
     if (this.elements.actualPaletteDiv) {
-      // Проверка на мобильное устройство
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-                      window.Telegram?.WebApp?.platform;
+      // Всегда применяем агрессивное обновление для стабильности
+      this.elements.actualPaletteDiv.style.display = 'none';
+      this.elements.actualPaletteDiv.offsetHeight; // Принудительный reflow
+      this.elements.actualPaletteDiv.style.display = '';
       
-      if (isMobile) {
-        // Более агрессивное обновление для мобильных
-        this.elements.actualPaletteDiv.style.display = 'none';
-        this.elements.actualPaletteDiv.offsetHeight; // Принудительный reflow
-        this.elements.actualPaletteDiv.style.display = '';
-        
-        // Дополнительное обновление через setTimeout
-        setTimeout(() => {
-          if (this.elements.actualPaletteDiv) {
-            this.elements.actualPaletteDiv.style.transform = 'translateZ(0)';
-            this.elements.actualPaletteDiv.offsetHeight;
-            this.elements.actualPaletteDiv.style.transform = '';
-          }
-        }, 50);
-      }
+      // Дополнительное обновление через setTimeout для всех устройств
+      setTimeout(() => {
+        if (this.elements.actualPaletteDiv) {
+          this.elements.actualPaletteDiv.style.transform = 'translateZ(0)';
+          this.elements.actualPaletteDiv.offsetHeight;
+          this.elements.actualPaletteDiv.style.transform = '';
+          
+          // Еще один цикл обновления для особо упрямых браузеров
+          setTimeout(() => {
+            if (this.elements.actualPaletteDiv) {
+              this.elements.actualPaletteDiv.classList.add('force-refresh');
+              this.elements.actualPaletteDiv.offsetHeight;
+              this.elements.actualPaletteDiv.classList.remove('force-refresh');
+            }
+          }, 100);
+        }
+      }, 50);
     }
   }
   
@@ -405,6 +408,11 @@ class ActualColors {
     if (state.actualPalette !== this.lastActualPalette) {
       this.lastActualPalette = state.actualPalette;
       this.renderActualPalette();
+      
+      // Дополнительный принудительный вызов для упрямых браузеров
+      setTimeout(() => {
+        this.renderActualPalette();
+      }, 200);
     }
     
     if (state.colorMapping !== this.lastColorMapping) {

@@ -160,6 +160,12 @@ input[type="color"][style*="display: none"] {
   pointer-events: none;
 }
 
+/* Принудительное обновление для упрямых браузеров */
+.force-refresh {
+  transform: translateZ(0) !important;
+  will-change: transform !important;
+}
+
 .color-code {
   font-size: clamp(10px, 2vw, 14px);
   margin-top: 4px;

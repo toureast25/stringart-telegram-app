@@ -117,7 +117,7 @@ class ColorAnalyzer {
     });
     
     // Обработчики для предустановленных цветов фона
-    this.elements.backgroundSettings?.querySelectorAll('.color-circle').forEach(btn => {
+    this.elements.backgroundSettings?.querySelectorAll('.bg-color-preset').forEach(btn => {
       btn.addEventListener('click', () => {
         const bgColor = btn.getAttribute('data-bg');
         if (bgColor) {
