@@ -30,7 +30,7 @@ class ImageProcessor {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = 'image/*';
-    fileInput.capture = 'environment';
+    // Убираем capture для открытия галереи вместо камеры
     fileInput.style.display = 'none';
     document.body.appendChild(fileInput);
     
