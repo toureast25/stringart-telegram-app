@@ -14,6 +14,7 @@ class StringArtApp {
     this.state = {
       originalImage: null,
       originalWidth: 0,
+      originalHeight: 0,
       currentPalette: [],
       actualPalette: [],
       colorMapping: [],
@@ -107,6 +108,7 @@ class StringArtApp {
     this.state = {
       originalImage: null,
       originalWidth: 0,
+      originalHeight: 0,
       currentPalette: [],
       actualPalette: [],
       colorMapping: [],
@@ -138,10 +140,11 @@ class StringArtApp {
   }
   
   // Публичные методы для взаимодействия с модулями
-  setOriginalImage(imageData, width) {
+  setOriginalImage(imageData, width, height) {
     this.updateState({
       originalImage: imageData,
-      originalWidth: width
+      originalWidth: width,
+      originalHeight: height
     });
   }
   

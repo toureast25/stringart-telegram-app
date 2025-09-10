@@ -213,8 +213,12 @@ class ImageProcessor {
   loadImageFromDataURL(dataURL, width) {
     // Используем обработчик onload для надежной загрузки на мобильных
     this.elements.previewImg.onload = () => {
+      // Вычисляем высоту на основе пропорций изображения
+      const aspectRatio = this.elements.previewImg.naturalHeight / this.elements.previewImg.naturalWidth;
+      const height = Math.round(width * aspectRatio);
+      
       // Обновляем состояние приложения
-      this.app.setOriginalImage(dataURL, width);
+      this.app.setOriginalImage(dataURL, width, height);
       
       // Настройка элементов управления
       this.setupControls(width);
@@ -255,26 +259,18 @@ class ImageProcessor {
     img.onload = () => {
       const newWidth = parseInt(this.elements.resolutionInput.value);
       const scale = newWidth / this.app.state.originalWidth;
+      const newHeight = this.app.state.originalHeight * scale;
       
       const ctx = this.snapshotCanvas.getContext('2d');
       this.snapshotCanvas.width = newWidth;
-      this.snapshotCanvas.height = img.height * scale;
+      this.snapshotCanvas.height = newHeight;
       
       // Применяем размытие
       const blurValue = parseFloat(this.elements.blurInput.value) || 0;
-      console.log('Applying blur:', blurValue, 'px'); // Отладочная информация
-      
-      // Дополнительная информация для Telegram Mini App
-      if (window.Telegram?.WebApp) {
-        console.log('Running in Telegram Mini App');
-        console.log('Telegram WebApp version:', window.Telegram.WebApp.version);
-        console.log('User agent:', navigator.userAgent);
-      }
       
       if (blurValue > 0) {
         // Проверяем поддержку filter в canvas
         const supportsFilter = 'filter' in ctx;
-        console.log('Canvas filter support:', supportsFilter); // Отладочная информация
         
         if (supportsFilter) {
           // Современные браузеры
