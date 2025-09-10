@@ -575,12 +575,16 @@ class ColorAnalyzer {
     const cancelBtn = document.getElementById('colorEditorCancel');
     const pipetteBtn = document.getElementById('colorEditorPipette');
     const preview = document.getElementById('colorEditorPreview');
+    const svCanvas = document.getElementById('colorEditorSV');
+    const hueCanvas = document.getElementById('colorEditorHue');
     
-    if (!modal || !hexInput || !rInput || !gInput || !bInput || !okBtn || !cancelBtn || !pipetteBtn || !preview) {
+    if (!modal || !hexInput || !rInput || !gInput || !bInput || !okBtn || !cancelBtn || !pipetteBtn || !preview || !svCanvas || !hueCanvas) {
       // Fallback — если по какой-то причине нет редактора, используем палитру
       return this.showColorPalette(onApply);
     }
     
+    let currentHue = 0, currentS = 0, currentV = 1;
+
     const setFromHex = (hex) => {
       if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return;
       const [r, g, b] = Utils.hexToRgb(hex);
@@ -590,6 +594,11 @@ class ColorAnalyzer {
       bInput.value = b;
       preview.style.background = hex;
       currentHex = hex.toLowerCase();
+      // Обновляем HSV значения без перерисовки (инициализируем позже)
+      const hsv = rgbToHsv ? rgbToHsv(r, g, b) : [0, 0, 1];
+      currentHue = hsv[0];
+      currentS = hsv[1];
+      currentV = hsv[2];
     };
     
     const clamp255 = (n) => Math.max(0, Math.min(255, parseInt(n || 0)));
@@ -601,6 +610,12 @@ class ColorAnalyzer {
       hexInput.value = hex;
       preview.style.background = hex;
       currentHex = hex;
+      const hsv = rgbToHsv(r, g, b);
+      currentHue = hsv[0];
+      currentS = hsv[1];
+      currentV = hsv[2];
+      if (typeof drawHue === 'function') drawHue();
+      if (typeof drawSV === 'function') drawSV();
     };
     
     let currentHex = currentColor && /^#[0-9A-Fa-f]{6}$/.test(currentColor) ? currentColor : '#ffffff';
@@ -648,6 +663,128 @@ class ColorAnalyzer {
     pipetteBtn.addEventListener('click', onPipette);
     
     modal.style.display = 'block';
+
+    // ==== HSV Picker implementation ====
+    const svCtx = svCanvas.getContext('2d');
+    const hueCtx = hueCanvas.getContext('2d');
+    function hsvToRgb(h, s, v) {
+      let c = v * s;
+      let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+      let m = v - c;
+      let r1 = 0, g1 = 0, b1 = 0;
+      if (h < 60) { r1 = c; g1 = x; }
+      else if (h < 120) { r1 = x; g1 = c; }
+      else if (h < 180) { g1 = c; b1 = x; }
+      else if (h < 240) { g1 = x; b1 = c; }
+      else if (h < 300) { r1 = x; b1 = c; }
+      else { r1 = c; b1 = x; }
+      return [Math.round((r1 + m) * 255), Math.round((g1 + m) * 255), Math.round((b1 + m) * 255)];
+    }
+    function rgbToHsv(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      const d = max - min;
+      let h = 0;
+      if (d === 0) h = 0;
+      else if (max === r) h = 60 * (((g - b) / d) % 6);
+      else if (max === g) h = 60 * (((b - r) / d) + 2);
+      else h = 60 * (((r - g) / d) + 4);
+      if (h < 0) h += 360;
+      const s = max === 0 ? 0 : d / max;
+      const v = max;
+      return [h, s, v];
+    }
+    function drawHue() {
+      const w = hueCanvas.width, h = hueCanvas.height;
+      const gradient = hueCtx.createLinearGradient(0, 0, 0, h);
+      gradient.addColorStop(0, '#ff0000');
+      gradient.addColorStop(1/6, '#ffff00');
+      gradient.addColorStop(2/6, '#00ff00');
+      gradient.addColorStop(3/6, '#00ffff');
+      gradient.addColorStop(4/6, '#0000ff');
+      gradient.addColorStop(5/6, '#ff00ff');
+      gradient.addColorStop(1, '#ff0000');
+      hueCtx.fillStyle = gradient;
+      hueCtx.fillRect(0, 0, w, h);
+      hueCtx.strokeStyle = '#fff';
+      hueCtx.lineWidth = 2;
+      const y = (currentHue / 360) * h;
+      hueCtx.beginPath();
+      hueCtx.rect(0.5, y - 2, w - 1, 4);
+      hueCtx.stroke();
+    }
+    function drawSV() {
+      const w = svCanvas.width, h = svCanvas.height;
+      const base = hsvToRgb(currentHue, 1, 1);
+      const gradX = svCtx.createLinearGradient(0, 0, w, 0);
+      gradX.addColorStop(0, 'rgba(255,255,255,1)');
+      gradX.addColorStop(1, `rgb(${base[0]},${base[1]},${base[2]})`);
+      svCtx.fillStyle = gradX;
+      svCtx.fillRect(0, 0, w, h);
+      const gradY = svCtx.createLinearGradient(0, 0, 0, h);
+      gradY.addColorStop(0, 'rgba(0,0,0,0)');
+      gradY.addColorStop(1, 'rgba(0,0,0,1)');
+      svCtx.fillStyle = gradY;
+      svCtx.fillRect(0, 0, w, h);
+      const x = currentS * w;
+      const y = (1 - currentV) * h;
+      svCtx.strokeStyle = '#fff';
+      svCtx.lineWidth = 2;
+      svCtx.beginPath();
+      svCtx.arc(x, y, 6, 0, Math.PI * 2);
+      svCtx.stroke();
+    }
+    function applyFromHSV() {
+      const rgb = hsvToRgb(currentHue, currentS, currentV);
+      const hex = Utils.rgbToHex(rgb[0], rgb[1], rgb[2]);
+      currentHex = hex;
+      hexInput.value = hex;
+      rInput.value = rgb[0]; gInput.value = rgb[1]; bInput.value = rgb[2];
+      preview.style.background = hex;
+    }
+    function updateFromSV(clientX, clientY) {
+      const rect = svCanvas.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+      currentS = x / rect.width;
+      currentV = 1 - (y / rect.height);
+      applyFromHSV();
+      drawSV();
+    }
+    function updateFromHue(clientY) {
+      const rect = hueCanvas.getBoundingClientRect();
+      const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+      currentHue = (y / rect.height) * 360;
+      applyFromHSV();
+      drawHue();
+      drawSV();
+    }
+    const svPointer = (e) => {
+      const pt = e.touches ? e.touches[0] : e;
+      updateFromSV(pt.clientX, pt.clientY);
+      e.preventDefault();
+    };
+    const huePointer = (e) => {
+      const pt = e.touches ? e.touches[0] : e;
+      updateFromHue(pt.clientY);
+      e.preventDefault();
+    };
+    const addDrag = (el, handler) => {
+      let active = false;
+      const onDown = (e) => { active = true; handler(e); };
+      const onMove = (e) => { if (!active) return; handler(e); };
+      const onUp = () => { active = false; };
+      el.addEventListener('mousedown', onDown);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      el.addEventListener('touchstart', onDown, { passive: false });
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onUp);
+    };
+    drawHue();
+    drawSV();
+    addDrag(svCanvas, svPointer);
+    addDrag(hueCanvas, huePointer);
   }
 
   // Метод для выбора цвета через палитру

@@ -181,6 +181,11 @@
               </label>
               <button id="colorEditorPipette" type="button" style="padding:8px 12px;background:var(--accent);border:none;border-radius:6px;color:#081018;cursor:pointer;">Пипетка</button>
             </div>
+            <!-- HSV Canvas Picker -->
+            <div style="display:flex;gap:10px;align-items:stretch;margin-bottom:12px;">
+              <canvas id="colorEditorSV" width="240" height="160" style="border-radius:8px; overflow:hidden; touch-action:none; background:#fff; flex:1; max-width:100%;"></canvas>
+              <canvas id="colorEditorHue" width="20" height="160" style="border-radius:8px; touch-action:none; background:#fff;"></canvas>
+            </div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
               <label style="display:flex;flex-direction:column;gap:6px;">R
                 <input id="colorEditorR" type="number" min="0" max="255" value="255" style="padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);">
@@ -291,7 +296,7 @@
 <script src="assets/js/utils.js?v=20250910"></script>
 <script src="assets/js/telegramAPI.js?v=20250910"></script>
 <script src="assets/js/imageProcessor.js?v=20250910"></script>
-<script src="assets/js/colorAnalyzer.js?v=20250910"></script>
+<script src="assets/js/colorAnalyzer.js?v=20250910b"></script>
 <script src="assets/js/actualColors.js?v=20250910"></script>
 <script src="assets/js/stringartGenerator.js?v=20250910"></script>
 <script src="assets/js/app.js?v=20250910"></script>
