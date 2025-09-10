@@ -43,28 +43,61 @@ class ImageProcessor {
   }
   
   bindEvents() {
-    // Обработчики для настроек разрешения
-    this.elements.resolutionRange?.addEventListener('input', (e) => {
-      this.elements.resolutionInput.value = e.target.value;
+    // Функция для обновления разрешения
+    const updateResolution = (value) => {
+      this.elements.resolutionInput.value = value;
+      this.elements.resolutionRange.value = value;
       this.updatePercent();
       this.applyResolution();
+    };
+    
+    // Функция для обновления размытия
+    const updateBlur = (value) => {
+      this.elements.blurInput.value = value;
+      this.elements.blurRange.value = value;
+      this.applyResolution();
+    };
+    
+    // Обработчики для настроек разрешения - добавляем множественные события для мобильных
+    this.elements.resolutionRange?.addEventListener('input', (e) => {
+      updateResolution(e.target.value);
+    });
+    
+    this.elements.resolutionRange?.addEventListener('change', (e) => {
+      updateResolution(e.target.value);
+    });
+    
+    this.elements.resolutionRange?.addEventListener('touchend', (e) => {
+      updateResolution(e.target.value);
     });
     
     this.elements.resolutionInput?.addEventListener('input', (e) => {
-      this.elements.resolutionRange.value = e.target.value;
-      this.updatePercent();
-      this.applyResolution();
+      updateResolution(e.target.value);
     });
     
-    // Обработчики для размытия
+    this.elements.resolutionInput?.addEventListener('change', (e) => {
+      updateResolution(e.target.value);
+    });
+    
+    // Обработчики для размытия - добавляем множественные события для мобильных
     this.elements.blurRange?.addEventListener('input', (e) => {
-      this.elements.blurInput.value = e.target.value;
-      this.applyResolution();
+      updateBlur(e.target.value);
+    });
+    
+    this.elements.blurRange?.addEventListener('change', (e) => {
+      updateBlur(e.target.value);
+    });
+    
+    this.elements.blurRange?.addEventListener('touchend', (e) => {
+      updateBlur(e.target.value);
     });
     
     this.elements.blurInput?.addEventListener('input', (e) => {
-      this.elements.blurRange.value = e.target.value;
-      this.applyResolution();
+      updateBlur(e.target.value);
+    });
+    
+    this.elements.blurInput?.addEventListener('change', (e) => {
+      updateBlur(e.target.value);
     });
   }
   
@@ -170,20 +203,23 @@ class ImageProcessor {
   }
   
   loadImageFromDataURL(dataURL, width) {
+    // Используем обработчик onload для надежной загрузки на мобильных
+    this.elements.previewImg.onload = () => {
+      // Обновляем состояние приложения
+      this.app.setOriginalImage(dataURL, width);
+      
+      // Настройка элементов управления
+      this.setupControls(width);
+      
+      // Применяем начальные настройки
+      this.applyResolution();
+      
+      // Автоматическое определение фона - только после полной загрузки
+      setTimeout(() => this.autoDetectBackground(), 100);
+    };
+    
     this.elements.previewImg.src = dataURL;
     this.elements.preview.classList.add('active');
-    
-    // Обновляем состояние приложения
-    this.app.setOriginalImage(dataURL, width);
-    
-    // Настройка элементов управления
-    this.setupControls(width);
-    
-    // Применяем начальные настройки
-    this.applyResolution();
-    
-    // Автоматическое определение фона
-    this.autoDetectBackground();
   }
   
   setupControls(width) {
@@ -238,11 +274,32 @@ class ImageProcessor {
   
   autoDetectBackground() {
     if (!this.elements.previewImg.complete || !this.elements.previewImg.naturalWidth) {
-      // Если изображение еще не загружено, попробуем позже
-      setTimeout(() => this.autoDetectBackground(), 100);
+      // Если изображение еще не загружено, попробуем несколько раз с увеличивающимся интервалом
+      let retryCount = 0;
+      const maxRetries = 20; // максимум 20 попыток (2 секунды)
+      
+      const retryDetection = () => {
+        retryCount++;
+        if (retryCount > maxRetries) {
+          console.warn('Auto background detection failed - image not loaded');
+          return;
+        }
+        
+        if (this.elements.previewImg.complete && this.elements.previewImg.naturalWidth > 0) {
+          this.performBackgroundDetection();
+        } else {
+          setTimeout(retryDetection, 100 * retryCount); // увеличиваем интервал
+        }
+      };
+      
+      setTimeout(retryDetection, 100);
       return;
     }
     
+    this.performBackgroundDetection();
+  }
+  
+  performBackgroundDetection() {
     const bgEdgePercent = document.getElementById('bgEdgePercent');
     const percent = bgEdgePercent ? parseInt(bgEdgePercent.value) || 10 : 10;
     const bgColor = Utils.getAverageEdgeColor(this.elements.previewImg, percent);

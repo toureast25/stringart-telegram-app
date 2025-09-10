@@ -464,7 +464,7 @@ class ColorAnalyzer {
   
   autoDetectBackground() {
     const previewImg = document.getElementById('previewImg');
-    if (!previewImg || !previewImg.src || !previewImg.complete || !previewImg.naturalWidth) {
+    if (!previewImg || !previewImg.src) {
       // Показываем сообщение пользователю, если изображение не загружено
       if (this.app.telegramAPI) {
         this.app.telegramAPI.showAlert('Сначала загрузите изображение для автоматического определения цвета фона');
@@ -474,6 +474,37 @@ class ColorAnalyzer {
       return;
     }
     
+    // Если изображение еще загружается, ждем
+    if (!previewImg.complete || !previewImg.naturalWidth) {
+      let retryCount = 0;
+      const maxRetries = 15;
+      
+      const retryDetection = () => {
+        retryCount++;
+        if (retryCount > maxRetries) {
+          if (this.app.telegramAPI) {
+            this.app.telegramAPI.showAlert('Не удалось определить цвет фона. Попробуйте еще раз.');
+          } else {
+            alert('Не удалось определить цвет фона. Попробуйте еще раз.');
+          }
+          return;
+        }
+        
+        if (previewImg.complete && previewImg.naturalWidth > 0) {
+          this.performAutoDetection();
+        } else {
+          setTimeout(retryDetection, 150);
+        }
+      };
+      
+      setTimeout(retryDetection, 100);
+      return;
+    }
+    
+    this.performAutoDetection();
+  }
+  
+  performAutoDetection() {
     // Выполняем автоматическое определение цвета фона
     this.recalculateBackgroundColor();
     

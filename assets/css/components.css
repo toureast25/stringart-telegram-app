@@ -53,6 +53,35 @@
 
 .settings input[type=range] {
   width: 60%;
+  /* Улучшения для мобильных устройств */
+  -webkit-appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+  touch-action: manipulation;
+}
+
+.settings input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.settings input[type=range]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .settings input[type=number] {
@@ -121,6 +150,23 @@
   color: var(--text);
   border-radius: 6px;
   cursor: pointer;
+  /* Улучшения для мобильных устройств */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 32px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pipette-btn:hover,
+.pipette-btn:active {
+  background: var(--border);
+}
+
+.pipette-btn:active {
+  transform: scale(0.95);
 }
 
 /* Color Maps Components */
