@@ -8,6 +8,11 @@
   --border: #1f2430;
 }
 
+/* Ensure border-box sizing across the app to avoid overflow from borders/padding */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 body { 
   margin: 0; 
   font-family: system-ui, sans-serif; 
@@ -48,6 +53,7 @@ header.app-header button {
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap; /* keep text on one line */
 }
 
 header.app-header button.primary {
@@ -70,6 +76,7 @@ main {
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
   overflow: hidden;
+  box-sizing: border-box; /* include border in width to prevent overflow */
 }
 
 video {
