@@ -366,7 +366,6 @@ class ActualColors {
     // Синхронизируем фактическую палитру с расчётной, если включена соответствующая галочка
     if (state.currentPalette !== this.lastCalculatedPalette) {
       this.lastCalculatedPalette = state.currentPalette;
-      console.log('ActualColors: palette changed, updating masks');
       
       if (this.elements.syncWithCalculated.checked && state.currentPalette.length > 0) {
         this.syncActualWithCalculated();

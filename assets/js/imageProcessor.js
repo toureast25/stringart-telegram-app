@@ -21,7 +21,6 @@ class ImageProcessor {
       percentDisplay: document.getElementById('percentDisplay'),
       blurRange: document.getElementById('blurRange'),
       blurInput: document.getElementById('blurInput'),
-      testBlurBtn: document.getElementById('testBlurBtn')
     };
     
     this.bindEvents();
@@ -58,7 +57,6 @@ class ImageProcessor {
       const blurValue = parseFloat(value) || 0;
       this.elements.blurInput.value = blurValue;
       this.elements.blurRange.value = blurValue;
-      console.log('Blur updated to:', blurValue); // Отладочная информация
       
       // Debouncing для плавности работы
       clearTimeout(blurTimeout);
@@ -109,10 +107,6 @@ class ImageProcessor {
       updateBlur(e.target.value);
     });
     
-    // Обработчик для кнопки тестирования размытия
-    this.elements.testBlurBtn?.addEventListener('click', () => {
-      this.testBlurFunctionality();
-    });
   }
   
   openFileDialog() {
@@ -286,28 +280,17 @@ class ImageProcessor {
           // Современные браузеры
           const filterValue = `blur(${blurValue}px)`;
           ctx.filter = filterValue;
-          console.log('Applied canvas filter:', filterValue); // Отладочная информация
           ctx.drawImage(img, 0, 0, this.snapshotCanvas.width, this.snapshotCanvas.height);
           ctx.filter = 'none'; // Сбрасываем фильтр
           
-          // Дополнительная проверка для Telegram Mini App
-          if (window.Telegram?.WebApp) {
-            console.log('Canvas blur applied in Telegram Mini App');
-          }
         } else {
           // Fallback для старых браузеров - используем программное размытие
-          console.warn('Canvas filter not supported, using programmatic blur');
           ctx.drawImage(img, 0, 0, this.snapshotCanvas.width, this.snapshotCanvas.height);
           this.applyProgrammaticBlur(ctx, this.snapshotCanvas.width, this.snapshotCanvas.height, blurValue);
-          
-          if (window.Telegram?.WebApp) {
-            console.warn('Canvas filter not supported in Telegram Mini App, using programmatic blur');
-          }
         }
       } else {
         // Без размытия
         ctx.drawImage(img, 0, 0, this.snapshotCanvas.width, this.snapshotCanvas.height);
-        console.log('No blur applied'); // Отладочная информация
       }
       
       // Обновляем второе изображение
@@ -329,11 +312,8 @@ class ImageProcessor {
       
       // Принудительное обновление для мобильных устройств и Telegram
       if (this.isMobileDevice() || this.isTelegramWebApp()) {
-        console.log('Mobile/Telegram device detected, forcing image refresh');
-        
         // Специальная обработка для Telegram WebApp
         if (this.isTelegramWebApp()) {
-          console.log('Telegram WebApp: forcing DOM reflow');
           // Принудительно обновляем DOM для Telegram
           const parent = this.elements.secondImg.parentNode;
           const nextSibling = this.elements.secondImg.nextSibling;
@@ -351,16 +331,11 @@ class ImageProcessor {
       // НЕ применяем CSS размытие - оно влияет на весь интерфейс
       // Размытие должно быть только в Canvas, а изображение показываем без CSS фильтров
       this.elements.secondImg.style.filter = 'none';
-      console.log('Canvas blur applied, no CSS filter used'); // Отладочная информация
       
       // ВАЖНО: Принудительно пересчитываем палитру, даже если onload не сработает
       // Это нужно для случаев, когда изображение уже загружено и onload не вызывается
       setTimeout(() => {
         if (this.app.colorAnalyzer) {
-          console.log('Force recalculating palette after blur change');
-          console.log('Mobile debug: secondImg src length:', this.elements.secondImg.src.length);
-          console.log('Mobile debug: secondImg complete:', this.elements.secondImg.complete);
-          console.log('Mobile debug: secondImg naturalWidth:', this.elements.secondImg.naturalWidth);
           this.app.colorAnalyzer.extractPalette();
         }
       }, 100);
@@ -368,7 +343,6 @@ class ImageProcessor {
       // Дополнительная попытка через больший интервал для мобильных устройств
       setTimeout(() => {
         if (this.app.colorAnalyzer && this.elements.secondImg.complete) {
-          console.log('Mobile debug: Second attempt to recalculate palette');
           this.app.colorAnalyzer.extractPalette();
         }
       }, 300);
@@ -377,12 +351,10 @@ class ImageProcessor {
       if (this.isTelegramWebApp()) {
         setTimeout(() => {
           if (this.app.colorAnalyzer) {
-            console.log('Telegram WebApp: Third attempt to recalculate palette');
             this.app.colorAnalyzer.extractPalette();
             
             // Принудительно обновляем маски
             if (this.app.actualColors) {
-              console.log('Telegram WebApp: Forcing mask update');
               this.app.actualColors.update();
             }
           }
@@ -498,41 +470,6 @@ class ImageProcessor {
     const finalImageData = new ImageData(finalData, width, height);
     ctx.putImageData(finalImageData, 0, 0);
     console.log('Programmatic blur applied with radius:', radius);
-  }
-
-  testBlurFunctionality() {
-    if (!this.app.state.originalImage) {
-      const message = 'Сначала загрузите изображение для тестирования размытия';
-      if (this.app.telegramAPI) {
-        this.app.telegramAPI.showAlert(message);
-      } else {
-        alert(message);
-      }
-      return;
-    }
-    
-    console.log('=== ТЕСТ РАЗМЫТИЯ В TELEGRAM ===');
-    console.log('Telegram WebApp доступен:', !!window.Telegram?.WebApp);
-    console.log('User Agent:', navigator.userAgent);
-    
-    // Устанавливаем тестовое значение размытия
-    const testBlurValue = 5;
-    this.elements.blurRange.value = testBlurValue;
-    this.elements.blurInput.value = testBlurValue;
-    
-    // Применяем размытие
-    this.applyResolution();
-    
-    // Показываем уведомление
-    const message = `Тест размытия запущен! Теперь размытие применяется только к изображению, не к интерфейсу. Размытие: ${testBlurValue}px`;
-    if (this.app.telegramAPI) {
-      this.app.telegramAPI.showAlert(message);
-      this.app.telegramAPI.hapticFeedback('medium');
-    } else {
-      alert(message);
-    }
-    
-    console.log('=== КОНЕЦ ТЕСТА ===');
   }
   
   reset() {
