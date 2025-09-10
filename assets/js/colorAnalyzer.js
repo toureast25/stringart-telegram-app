@@ -631,7 +631,23 @@ class ColorAnalyzer {
     const onR = () => setFromRgb();
     const onG = () => setFromRgb();
     const onB = () => setFromRgb();
-    const onOk = () => { close(); onApply && onApply(currentHex); };
+    const normalizeHex = (hex) => {
+      if (typeof hex !== 'string') return null;
+      let v = hex.trim().toLowerCase();
+      if (!v.startsWith('#')) v = '#' + v;
+      if (/^#[0-9a-f]{6}$/.test(v)) return v;
+      return null;
+    };
+    const onOk = () => {
+      // Берём актуальное значение из HEX поля, иначе собираем из RGB
+      let finalHex = normalizeHex(hexInput.value) || Utils.rgbToHex(
+        Math.max(0, Math.min(255, parseInt(rInput.value || 0))),
+        Math.max(0, Math.min(255, parseInt(gInput.value || 0))),
+        Math.max(0, Math.min(255, parseInt(bInput.value || 0)))
+      );
+      if (onApply) onApply(finalHex);
+      close();
+    };
     const onCancel = () => close();
     const onPipette = () => {
       const secondImg = document.getElementById('secondImg');
