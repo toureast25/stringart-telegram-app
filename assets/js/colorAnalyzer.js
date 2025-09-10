@@ -667,6 +667,8 @@ class ColorAnalyzer {
         savedPosition = document.body.style.position;
         savedTop = document.body.style.top;
         savedWidth = document.body.style.width;
+        document.documentElement.classList.add('modal-open');
+        document.body.classList.add('modal-open');
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
         document.body.style.top = `-${savedScrollY}px`;
@@ -684,6 +686,8 @@ class ColorAnalyzer {
     const unlockScroll = () => {
       try {
         modal.removeEventListener('touchmove', preventTouchScroll);
+        document.documentElement.classList.remove('modal-open');
+        document.body.classList.remove('modal-open');
         document.body.style.overflow = savedOverflow;
         document.body.style.position = savedPosition;
         document.body.style.top = savedTop;

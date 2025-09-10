@@ -28,6 +28,13 @@ html, body, .container, .app {
   box-sizing: border-box;
 }
 
+/* Lock page scroll when modal is open */
+html.modal-open, body.modal-open {
+  overflow: hidden !important;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
 .app {
   display: flex;
   flex-direction: column;
