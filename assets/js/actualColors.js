@@ -189,12 +189,19 @@ class ActualColors {
           this.updateActualColor(index, colorInput.value);
         });
       } else {
-        // Для мобильных (не Telegram) используем текстовое поле
+        // Для мобильных (не Telegram) используем палитру цветов
         circle.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          code.focus();
-          code.select();
+          if (this.app.colorAnalyzer) {
+            this.app.colorAnalyzer.showColorPalette((selectedColor) => {
+              if (selectedColor) {
+                circle.style.backgroundColor = selectedColor;
+                code.value = selectedColor;
+                this.updateActualColor(index, selectedColor);
+              }
+            });
+          }
         });
       }
       
@@ -285,27 +292,22 @@ class ActualColors {
     }
   }
   
-  // Метод для выбора цвета в Telegram
+  // Метод для выбора цвета через палитру
   showTelegramColorPicker(index, currentColor, circle, code) {
-    // Создаем простой prompt для ввода HEX кода
-    const newColor = prompt('Введите HEX код цвета (например: #ff0000):', currentColor);
-    
-    if (newColor && /^#[0-9A-F]{6}$/i.test(newColor)) {
-      circle.style.backgroundColor = newColor;
-      code.value = newColor;
-      this.updateActualColor(index, newColor);
-      
-      // Haptic feedback для Telegram
-      if (window.Telegram?.WebApp?.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-      }
-    } else if (newColor !== null) {
-      // Показываем ошибку только если пользователь не отменил
-      if (window.Telegram?.WebApp?.showAlert) {
-        window.Telegram.WebApp.showAlert('Неверный формат цвета. Используйте формат #RRGGBB (например: #ff0000)');
-      } else {
-        alert('Неверный формат цвета. Используйте формат #RRGGBB (например: #ff0000)');
-      }
+    // Используем общий метод из colorAnalyzer
+    if (this.app.colorAnalyzer) {
+      this.app.colorAnalyzer.showColorPalette((selectedColor) => {
+        if (selectedColor) {
+          circle.style.backgroundColor = selectedColor;
+          code.value = selectedColor;
+          this.updateActualColor(index, selectedColor);
+          
+          // Haptic feedback для Telegram
+          if (window.Telegram?.WebApp?.HapticFeedback) {
+            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+          }
+        }
+      });
     }
   }
   

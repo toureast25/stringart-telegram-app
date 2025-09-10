@@ -558,12 +558,17 @@ class ColorAnalyzer {
           this.updatePaletteColor(idx, colorInput.value);
         });
       } else {
-        // Для мобильных (не Telegram) используем текстовое поле
+        // Для мобильных (не Telegram) используем палитру цветов
         circle.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          code.focus();
-          code.select();
+          this.showColorPalette((selectedColor) => {
+            if (selectedColor) {
+              circle.style.backgroundColor = selectedColor;
+              code.value = selectedColor;
+              this.updatePaletteColor(idx, selectedColor);
+            }
+          });
         });
       }
       
@@ -593,28 +598,85 @@ class ColorAnalyzer {
     });
   }
   
-  // Метод для выбора цвета в Telegram
+  // Метод для выбора цвета через палитру
   showTelegramColorPicker(idx, currentColor, circle, code) {
-    // Создаем простой prompt для ввода HEX кода
-    const newColor = prompt('Введите HEX код цвета (например: #ff0000):', currentColor);
+    this.showColorPalette((selectedColor) => {
+      if (selectedColor) {
+        circle.style.backgroundColor = selectedColor;
+        code.value = selectedColor;
+        this.updatePaletteColor(idx, selectedColor);
+        
+        // Haptic feedback для Telegram
+        if (window.Telegram?.WebApp?.HapticFeedback) {
+          window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        }
+      }
+    });
+  }
+  
+  // Показать модальное окно с палитрой цветов
+  showColorPalette(callback) {
+    const modal = document.getElementById('colorPaletteModal');
+    const grid = document.getElementById('colorPaletteGrid');
+    const closeBtn = document.getElementById('closePaletteModal');
     
-    if (newColor && /^#[0-9A-F]{6}$/i.test(newColor)) {
-      circle.style.backgroundColor = newColor;
-      code.value = newColor;
-      this.updatePaletteColor(idx, newColor);
+    if (!modal || !grid || !closeBtn) return;
+    
+    // Очищаем сетку
+    grid.innerHTML = '';
+    
+    // Популярные цвета для палитры
+    const colors = [
+      '#ff0000', '#ff4500', '#ff8c00', '#ffd700', '#ffff00', '#adff2f',
+      '#00ff00', '#00ff7f', '#00ffff', '#0080ff', '#0000ff', '#8000ff',
+      '#ff00ff', '#ff1493', '#ff69b4', '#ffc0cb', '#ffffff', '#f0f0f0',
+      '#d3d3d3', '#a9a9a9', '#808080', '#696969', '#404040', '#000000',
+      '#8b0000', '#b22222', '#dc143c', '#cd5c5c', '#f08080', '#fa8072',
+      '#e9967a', '#ffa07a', '#ffa500', '#ff7f50', '#ff6347', '#ff4500'
+    ];
+    
+    // Создаем кружки цветов
+    colors.forEach(color => {
+      const colorCircle = document.createElement('div');
+      colorCircle.style.width = '36px';
+      colorCircle.style.height = '36px';
+      colorCircle.style.borderRadius = '50%';
+      colorCircle.style.backgroundColor = color;
+      colorCircle.style.border = '2px solid #fff';
+      colorCircle.style.cursor = 'pointer';
+      colorCircle.style.transition = 'transform 0.2s ease';
       
-      // Haptic feedback для Telegram
-      if (window.Telegram?.WebApp?.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      colorCircle.addEventListener('mouseover', () => {
+        colorCircle.style.transform = 'scale(1.1)';
+      });
+      
+      colorCircle.addEventListener('mouseout', () => {
+        colorCircle.style.transform = 'scale(1)';
+      });
+      
+      colorCircle.addEventListener('click', () => {
+        modal.style.display = 'none';
+        callback(color);
+      });
+      
+      grid.appendChild(colorCircle);
+    });
+    
+    // Показываем модальное окно
+    modal.style.display = 'block';
+    
+    // Обработчик закрытия
+    const closeModal = () => {
+      modal.style.display = 'none';
+      callback(null);
+    };
+    
+    closeBtn.onclick = closeModal;
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        closeModal();
       }
-    } else if (newColor !== null) {
-      // Показываем ошибку только если пользователь не отменил
-      if (window.Telegram?.WebApp?.showAlert) {
-        window.Telegram.WebApp.showAlert('Неверный формат цвета. Используйте формат #RRGGBB (например: #ff0000)');
-      } else {
-        alert('Неверный формат цвета. Используйте формат #RRGGBB (например: #ff0000)');
-      }
-    }
+    };
   }
   
   updatePaletteColor(index, color) {
