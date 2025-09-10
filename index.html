@@ -75,6 +75,14 @@
       <div id="paletteSection" class="second-preview">
         <div class="preview-label">3) Анализ цветов</div>
         
+        <!-- Индикатор загрузки для анализа цветов -->
+        <div id="paletteLoadingOverlay" class="loading-overlay">
+          <div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Анализ цветов...</div>
+          </div>
+        </div>
+        
         <!-- Background Settings -->
         <div id="backgroundSettings" class="settings">
           <label style="font-weight:bold;">Цвет фона:</label>
@@ -154,6 +162,14 @@
       <!-- Step 4: Actual Colors Mapping -->
       <div id="actualColorsSection" class="second-preview">
         <div class="preview-label">4) Сопоставление с фактическими цветами</div>
+        
+        <!-- Индикатор загрузки для масок -->
+        <div id="masksLoadingOverlay" class="loading-overlay">
+          <div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Генерация масок...</div>
+          </div>
+        </div>
         <div class="settings">
           <label>
             Фактическая палитра (доступные цвета):
@@ -188,6 +204,14 @@
       <!-- Step 5: StringArt Settings -->
       <div id="stringartSection" class="second-preview">
         <div class="preview-label">5) Настройки StringArt</div>
+        
+        <!-- Индикатор загрузки для StringArt -->
+        <div id="stringartLoadingOverlay" class="loading-overlay">
+          <div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Генерация превью...</div>
+          </div>
+        </div>
         <div class="settings">
           <label>
             Форма полотна:

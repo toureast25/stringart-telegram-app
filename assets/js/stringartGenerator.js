@@ -7,6 +7,9 @@ class StringArtGenerator {
   constructor(app) {
     this.app = app;
     
+    // Элементы индикаторов загрузки
+    this.loadingOverlay = document.getElementById('stringartLoadingOverlay');
+    
     this.elements = {
       stringartSection: document.getElementById('stringartSection'),
       canvasShape: document.getElementById('canvasShape'),
@@ -41,7 +44,23 @@ class StringArtGenerator {
     this.elements.nailCount?.addEventListener('input', debouncedGeneratePreview);
   }
   
+  // Методы для управления индикатором загрузки
+  showLoading() {
+    if (this.loadingOverlay) {
+      this.loadingOverlay.classList.add('active');
+    }
+  }
+  
+  hideLoading() {
+    if (this.loadingOverlay) {
+      this.loadingOverlay.classList.remove('active');
+    }
+  }
+
   generatePreview() {
+    // Показываем индикатор загрузки
+    this.showLoading();
+    
     const shape = this.elements.canvasShape.value;
     const size = parseInt(this.elements.canvasSize.value);
     const nails = parseInt(this.elements.nailCount.value);
@@ -108,6 +127,9 @@ class StringArtGenerator {
     if (this.app.state.colorMapping.length > 0) {
       this.overlayColorMasks(ctx, centerX, centerY, imageRadius, shape);
     }
+    
+    // Скрываем индикатор загрузки
+    this.hideLoading();
     
     // Обновляем информацию
     this.updateInfo(size, nails, shape);

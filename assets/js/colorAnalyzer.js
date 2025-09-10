@@ -14,6 +14,12 @@ class ColorAnalyzer {
       colorMaps: null
     };
     
+    // Элементы индикаторов загрузки
+    this.loadingElements = {
+      paletteOverlay: document.getElementById('paletteLoadingOverlay'),
+      masksOverlay: document.getElementById('masksLoadingOverlay')
+    };
+    
     this.elements = {
       clusteringMethod: document.getElementById('clusteringMethod'),
       colorCount: document.getElementById('colorCount'),
@@ -36,12 +42,14 @@ class ColorAnalyzer {
   }
   
   bindEvents() {
-    // Debouncing для тяжелых операций
+    // Debouncing для тяжелых операций с requestAnimationFrame
     let paletteTimeout;
     const debouncedExtractPalette = () => {
       clearTimeout(paletteTimeout);
       paletteTimeout = setTimeout(() => {
-        this.extractPalette();
+        requestAnimationFrame(() => {
+          this.extractPalette();
+        });
       }, 52); // 52ms задержка для тяжелых операций
     };
     
@@ -49,7 +57,9 @@ class ColorAnalyzer {
     const debouncedTonesChange = () => {
       clearTimeout(tonesTimeout);
       tonesTimeout = setTimeout(() => {
-        this.handleTonesCountChange();
+        requestAnimationFrame(() => {
+          this.handleTonesCountChange();
+        });
       }, 35); // 35ms для средних операций
     };
     
@@ -164,9 +174,38 @@ class ColorAnalyzer {
     this.extractPalette();
   }
   
+  // Методы для управления индикаторами загрузки
+  showPaletteLoading() {
+    if (this.loadingElements.paletteOverlay) {
+      this.loadingElements.paletteOverlay.classList.add('active');
+    }
+  }
+  
+  hidePaletteLoading() {
+    if (this.loadingElements.paletteOverlay) {
+      this.loadingElements.paletteOverlay.classList.remove('active');
+    }
+  }
+  
+  showMasksLoading() {
+    if (this.loadingElements.masksOverlay) {
+      this.loadingElements.masksOverlay.classList.add('active');
+    }
+  }
+  
+  hideMasksLoading() {
+    if (this.loadingElements.masksOverlay) {
+      this.loadingElements.masksOverlay.classList.remove('active');
+    }
+  }
+
   extractPalette() {
+    // Показываем индикатор загрузки
+    this.showPaletteLoading();
+    
     const secondImg = document.getElementById('secondImg');
     if (!secondImg.src) {
+      this.hidePaletteLoading();
       return;
     }
     
@@ -229,6 +268,9 @@ class ColorAnalyzer {
     // Активируем следующие разделы
     document.getElementById('actualColorsSection').classList.add('active');
     document.getElementById('stringartSection').classList.add('active');
+    
+    // Скрываем индикатор загрузки
+    this.hidePaletteLoading();
     
     // Специальная обработка для Telegram WebApp
     if (window.Telegram && window.Telegram.WebApp) {
@@ -430,8 +472,14 @@ class ColorAnalyzer {
   }
   
   generateColorMaps() {
+    // Показываем индикатор загрузки масок
+    this.showMasksLoading();
+    
     const secondImg = document.getElementById('secondImg');
-    if (!secondImg.src || this.app.state.currentPalette.length === 0) return;
+    if (!secondImg.src || this.app.state.currentPalette.length === 0) {
+      this.hideMasksLoading();
+      return;
+    }
     
     // Проверяем кеш для оптимизации
     const currentImageSrc = secondImg.src;
@@ -442,6 +490,7 @@ class ColorAnalyzer {
         this.cache.colorMaps) {
       // Используем кешированные маски
       this.elements.colorMaps.innerHTML = this.cache.colorMaps;
+      this.hideMasksLoading();
       return;
     }
     
@@ -510,6 +559,9 @@ class ColorAnalyzer {
     this.cache.lastImageSrc = currentImageSrc;
     this.cache.lastPalette = currentPalette;
     this.cache.colorMaps = this.elements.colorMaps.innerHTML;
+    
+    // Скрываем индикатор загрузки
+    this.hideMasksLoading();
   }
   
   openPipette(colorIndex) {
