@@ -36,11 +36,11 @@ html, body, .container, .app {
 
 header.app-header {
   display: flex;
-  gap: 12px;
-  padding: 12px;
+  gap: 6px;
+  padding: 8px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap; /* prevent horizontal scroll on small screens */
+  flex-wrap: nowrap; /* keep in one line */
   width: 100%;
   box-sizing: border-box;
 }
@@ -49,11 +49,13 @@ header.app-header button {
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
-  padding: 10px 14px;
-  border-radius: 12px;
+  padding: 6px 8px;
+  border-radius: 10px;
   font-weight: 600;
+  font-size: clamp(11px, 2.8vw, 13px);
   cursor: pointer;
   white-space: nowrap; /* keep text on one line */
+  min-width: 0;
 }
 
 header.app-header button.primary {
