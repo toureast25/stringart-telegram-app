@@ -327,6 +327,27 @@ class ImageProcessor {
       this.elements.secondImg.src = newDataURL;
       this.elements.secondImg.style.width = '100%';
       
+      // Принудительное обновление для мобильных устройств и Telegram
+      if (this.isMobileDevice() || this.isTelegramWebApp()) {
+        console.log('Mobile/Telegram device detected, forcing image refresh');
+        
+        // Специальная обработка для Telegram WebApp
+        if (this.isTelegramWebApp()) {
+          console.log('Telegram WebApp: forcing DOM reflow');
+          // Принудительно обновляем DOM для Telegram
+          const parent = this.elements.secondImg.parentNode;
+          const nextSibling = this.elements.secondImg.nextSibling;
+          parent.removeChild(this.elements.secondImg);
+          parent.insertBefore(this.elements.secondImg, nextSibling);
+        } else {
+          // Принудительно перерисовываем изображение для обычных мобильных
+          this.elements.secondImg.style.display = 'none';
+          setTimeout(() => {
+            this.elements.secondImg.style.display = 'block';
+          }, 50);
+        }
+      }
+      
       // НЕ применяем CSS размытие - оно влияет на весь интерфейс
       // Размытие должно быть только в Canvas, а изображение показываем без CSS фильтров
       this.elements.secondImg.style.filter = 'none';
@@ -337,11 +358,51 @@ class ImageProcessor {
       setTimeout(() => {
         if (this.app.colorAnalyzer) {
           console.log('Force recalculating palette after blur change');
+          console.log('Mobile debug: secondImg src length:', this.elements.secondImg.src.length);
+          console.log('Mobile debug: secondImg complete:', this.elements.secondImg.complete);
+          console.log('Mobile debug: secondImg naturalWidth:', this.elements.secondImg.naturalWidth);
           this.app.colorAnalyzer.extractPalette();
         }
       }, 100);
+      
+      // Дополнительная попытка через больший интервал для мобильных устройств
+      setTimeout(() => {
+        if (this.app.colorAnalyzer && this.elements.secondImg.complete) {
+          console.log('Mobile debug: Second attempt to recalculate palette');
+          this.app.colorAnalyzer.extractPalette();
+        }
+      }, 300);
+      
+      // Специальная обработка для Telegram WebApp - еще более агрессивный пересчет
+      if (this.isTelegramWebApp()) {
+        setTimeout(() => {
+          if (this.app.colorAnalyzer) {
+            console.log('Telegram WebApp: Third attempt to recalculate palette');
+            this.app.colorAnalyzer.extractPalette();
+            
+            // Принудительно обновляем маски
+            if (this.app.actualColors) {
+              console.log('Telegram WebApp: Forcing mask update');
+              this.app.actualColors.update();
+            }
+          }
+        }, 500);
+      }
     };
     img.src = this.app.state.originalImage;
+  }
+  
+  // Определение мобильного устройства и Telegram
+  isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           window.innerWidth <= 768 ||
+           ('ontouchstart' in window) ||
+           (window.Telegram && window.Telegram.WebApp);
+  }
+  
+  // Проверка на Telegram WebApp
+  isTelegramWebApp() {
+    return window.Telegram && window.Telegram.WebApp;
   }
   
   autoDetectBackground() {

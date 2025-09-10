@@ -148,6 +148,13 @@ class ColorAnalyzer {
       return;
     }
     
+    // Дополнительная проверка для мобильных устройств
+    if (this.isMobileDevice() && secondImg.naturalWidth === 0) {
+      console.warn('extractPalette: mobile device, image dimensions not ready, retrying...');
+      setTimeout(() => this.extractPalette(), 100);
+      return;
+    }
+    
     console.log('extractPalette: analyzing image', secondImg.naturalWidth + 'x' + secondImg.naturalHeight);
     
     const canvas = document.createElement('canvas');
@@ -193,6 +200,24 @@ class ColorAnalyzer {
     
     console.log('extractPalette: completed, palette updated with', palette.length, 'colors');
     console.log('extractPalette: generated', resultColors.length, 'result colors from', sampleColors.length, 'samples');
+    
+    // Специальная обработка для Telegram WebApp
+    if (window.Telegram && window.Telegram.WebApp) {
+      console.log('Telegram WebApp: triggering haptic feedback after palette update');
+      try {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      } catch (e) {
+        console.log('Telegram WebApp: haptic feedback not available');
+      }
+    }
+  }
+  
+  // Определение мобильного устройства и Telegram
+  isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           window.innerWidth <= 768 ||
+           ('ontouchstart' in window) ||
+           (window.Telegram && window.Telegram.WebApp);
   }
   
   // k-means алгоритм кластеризации
