@@ -38,6 +38,9 @@ class StringArtApp {
       // Инициализация UI
       this.initializeUI();
       
+      // Инициализация интерфейса метода кластеризации
+      this.colorAnalyzer.updateMethodInterface();
+      
       // Загрузка тестового изображения
       this.loadDefaultImage();
       

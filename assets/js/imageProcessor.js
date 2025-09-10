@@ -237,9 +237,15 @@ class ImageProcessor {
   }
   
   autoDetectBackground() {
-    if (!this.elements.previewImg.complete) return;
+    if (!this.elements.previewImg.complete || !this.elements.previewImg.naturalWidth) {
+      // Если изображение еще не загружено, попробуем позже
+      setTimeout(() => this.autoDetectBackground(), 100);
+      return;
+    }
     
-    const bgColor = Utils.getAverageEdgeColor(this.elements.previewImg);
+    const bgEdgePercent = document.getElementById('bgEdgePercent');
+    const percent = bgEdgePercent ? parseInt(bgEdgePercent.value) || 10 : 10;
+    const bgColor = Utils.getAverageEdgeColor(this.elements.previewImg, percent);
     this.app.setBackgroundColor(bgColor);
   }
   

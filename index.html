@@ -260,8 +260,18 @@ document.addEventListener('DOMContentLoaded', () => {
     ).join('');
     
     // Обновляем цвет в палитре
-    if (window.stringArtApp) {
+    if (window.stringArtApp && window.stringArtApp.colorAnalyzer) {
       window.stringArtApp.colorAnalyzer.updatePaletteColor(idx, hex);
+      
+      // Обновляем отображение палитры
+      window.stringArtApp.colorAnalyzer.renderPalette();
+      
+      // Обновляем сопоставление с фактической палитрой
+      if (window.stringArtApp.actualColors && 
+          document.getElementById('syncWithCalculated') && 
+          document.getElementById('syncWithCalculated').checked) {
+        window.stringArtApp.actualColors.syncActualWithCalculated();
+      }
     }
     
     pipetteOverlay.style.display = 'none';

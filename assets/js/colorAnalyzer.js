@@ -50,10 +50,14 @@ class ColorAnalyzer {
     
     // Обработчики для настроек фона
     this.elements.bgColorPicker?.addEventListener('input', (e) => {
-      this.app.setBackgroundColor(e.target.value);
+      this.setBackgroundColorAndUpdate(e.target.value);
     });
     
     this.elements.bgEdgePercent?.addEventListener('input', () => {
+      this.recalculateBackgroundColor();
+    });
+    
+    this.elements.bgEdgePercent?.addEventListener('change', () => {
       this.recalculateBackgroundColor();
     });
     
@@ -62,12 +66,32 @@ class ColorAnalyzer {
       btn.addEventListener('click', () => {
         const bgColor = btn.getAttribute('data-bg');
         if (bgColor) {
-          this.app.setBackgroundColor(bgColor);
+          this.setBackgroundColorAndUpdate(bgColor);
         }
       });
     });
   }
   
+  setBackgroundColorAndUpdate(color) {
+    this.app.setBackgroundColor(color);
+    
+    // Реактивное обновление палитры и карт при изменении фона
+    if (this.app.state.currentPalette.length > 0) {
+      // Обновляем первый элемент палитры (фон)
+      const newPalette = [...this.app.state.currentPalette];
+      newPalette[0] = color;
+      this.app.setPalette(newPalette);
+      
+      // Пересчитываем карты глубины
+      this.generateColorMaps();
+      
+      // Обновляем сопоставление с фактической палитрой
+      if (this.app.actualColors && this.elements.syncWithCalculated && this.elements.syncWithCalculated.checked) {
+        this.app.actualColors.syncActualWithCalculated();
+      }
+    }
+  }
+
   updateMethodInterface() {
     const method = this.elements.clusteringMethod.value;
     
@@ -322,6 +346,13 @@ class ColorAnalyzer {
     newPalette[index] = color;
     this.app.setPalette(newPalette);
     this.generateColorMaps();
+    
+    // Обновляем сопоставление с фактической палитрой
+    if (this.app.actualColors && this.elements.syncWithCalculated && this.elements.syncWithCalculated.checked) {
+      this.app.actualColors.syncActualWithCalculated();
+    } else if (this.app.actualColors && this.elements.autoMatchColors && this.elements.autoMatchColors.checked) {
+      this.app.actualColors.matchColors();
+    }
   }
   
   generateColorMaps() {
@@ -406,6 +437,22 @@ class ColorAnalyzer {
       const percent = parseInt(this.elements.bgEdgePercent.value) || 10;
       const bgColor = Utils.getAverageEdgeColor(previewImg, percent);
       this.app.setBackgroundColor(bgColor);
+      
+      // Пересчитываем палитру и карты при изменении фона
+      if (this.app.state.currentPalette.length > 0) {
+        // Обновляем первый элемент палитры (фон)
+        const newPalette = [...this.app.state.currentPalette];
+        newPalette[0] = bgColor;
+        this.app.setPalette(newPalette);
+        
+        // Пересчитываем карты глубины
+        this.generateColorMaps();
+        
+        // Обновляем сопоставление с фактической палитрой
+        if (this.app.actualColors && this.elements.syncWithCalculated && this.elements.syncWithCalculated.checked) {
+          this.app.actualColors.syncActualWithCalculated();
+        }
+      }
     }
   }
   
