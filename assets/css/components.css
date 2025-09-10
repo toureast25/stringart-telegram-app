@@ -17,13 +17,18 @@
   font-weight: bold;
 }
 
-.preview img {
+/* Единый стиль для всех изображений в превью */
+.preview img, .second-preview img, #previewImg, #secondImg {
   display: block;
-  width: 100%;
+  width: calc(100% - 32px); /* Отступы по 16px с каждой стороны */
+  max-width: calc(100% - 32px);
   height: auto;
   object-fit: contain;
   background: #000;
   max-height: 70dvh;
+  border-radius: 8px;
+  margin: 0 auto 16px auto;
+  box-sizing: border-box;
 }
 
 .second-preview {
@@ -36,30 +41,52 @@
   display: block;
 }
 
-.second-preview img {
-  width: 100%;
-  height: auto;
-}
+/* Стили изображений уже определены выше в едином блоке */
 
-/* Settings Components */
+/* Settings Components - адаптивные */
 .settings {
   margin-top: 10px;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 .settings label {
   display: block;
-  margin-top: 8px;
+  margin-bottom: 12px;
+  font-size: clamp(14px, 2.5vw, 16px);
+  line-height: 1.4;
 }
 
+.settings input, .settings select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: clamp(14px, 2.5vw, 16px);
+  padding: clamp(8px, 1.5vw, 12px);
+  margin-top: 4px;
+}
+
+/* Дублирующий стиль удален - уже определен выше */
+
+/* Адаптивные ползунки и числовые поля */
 .settings input[type=range] {
-  width: 60%;
+  width: clamp(200px, 60%, 300px);
+  margin-right: clamp(8px, 2vw, 16px);
   /* Улучшения для мобильных устройств */
   -webkit-appearance: none;
-  height: 6px;
+  appearance: none;
+  height: clamp(4px, 1vw, 6px);
   border-radius: 3px;
   background: var(--border);
   outline: none;
   touch-action: manipulation;
+}
+
+.settings input[type=number] {
+  width: clamp(60px, 15vw, 80px);
+  min-width: 60px;
+  display: inline-block;
+  margin-left: clamp(4px, 1vw, 8px);
 }
 
 .settings input[type=range]::-webkit-slider-thumb {
@@ -101,12 +128,15 @@
   border-left: 3px solid var(--accent);
 }
 
-/* Color Palette Components */
+/* Color Palette Components - адаптивные */
 .palette {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: clamp(6px, 1.5vw, 12px);
   margin-top: 10px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  justify-content: center;
 }
 
 .color-item {
@@ -116,23 +146,28 @@
   align-items: center;
   justify-content: flex-start;
   margin: 0;
-  flex: 0 0 calc((100% - 20px)/3);
-  max-width: calc((100% - 20px)/3);
+  /* Адаптивная ширина в зависимости от размера экрана */
+  flex: 0 0 clamp(80px, 15vw, 120px);
+  max-width: clamp(80px, 15vw, 120px);
+  min-width: 80px;
 }
 
 .color-circle {
-  width: 32px;
-  height: 32px;
+  width: clamp(28px, 6vw, 40px);
+  height: clamp(28px, 6vw, 40px);
   border-radius: 50%;
   border: 2px solid #fff;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .color-code {
-  font-size: 12px;
+  font-size: clamp(10px, 2vw, 14px);
   margin-top: 4px;
-  width: 72px;
-  padding: 2px 4px;
+  width: clamp(60px, 12vw, 80px);
+  padding: clamp(2px, 0.5vw, 4px) clamp(2px, 0.5vw, 6px);
+  box-sizing: border-box;
+  text-align: center;
 }
 
 .color-controls {
@@ -170,17 +205,34 @@
 }
 
 /* Color Maps Components */
-#colorMaps .map-container {
-  position: relative;
+.maps-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(8px, 2vw, 16px);
+  margin-top: 10px;
+  padding: 0 16px;
   box-sizing: border-box;
-  flex: 0 0 calc((100% - 30px)/4);
-  max-width: calc((100% - 30px)/4);
+  justify-content: center;
 }
 
-#colorMaps img {
+/* Адаптивные контейнеры масок */
+#colorMaps .map-container, #actualMapsContainer .map-container {
+  position: relative;
+  box-sizing: border-box;
+  /* Адаптивная ширина: 2 колонки на мобильных, 3-4 на десктопе */
+  flex: 0 0 clamp(140px, 45%, 200px);
+  max-width: clamp(140px, 45%, 200px);
+  min-width: 140px;
+  margin-bottom: clamp(8px, 2vw, 16px);
+}
+
+#colorMaps img, #actualMapsContainer img {
   width: 100%;
   height: auto;
   border: 2px solid var(--border);
+  border-radius: clamp(4px, 1vw, 8px);
+  object-fit: contain;
+  box-sizing: border-box;
   display: block;
 }
 
@@ -246,10 +298,16 @@
   border: 2px solid var(--border);
 }
 
-/* StringArt Canvas */
+/* StringArt Canvas - адаптивный */
 #stringartCanvas {
   display: block;
-  margin: 0 auto;
+  margin: 0 auto 16px auto;
+  width: calc(100% - 32px);
+  max-width: calc(100% - 32px);
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  box-sizing: border-box;
 }
 
 /* Pipette Overlay */
@@ -390,17 +448,13 @@ button:active, .pipette-btn:active {
     position: relative;
   }
   
-  /* Ограничиваем размеры изображений на мобильных */
-  #secondImg {
-    max-width: 100%;
-    max-height: 70vh;
-    object-fit: contain;
+  /* Дополнительные ограничения для мобильных */
+  .preview img, .second-preview img, #previewImg, #secondImg {
+    max-height: 60vh;
   }
   
-  /* Оптимизация canvas для мобильных */
   #stringartCanvas {
-    max-width: 100%;
-    max-height: 60vh;
+    max-height: 50vh;
   }
   
   /* Стабилизация контейнеров на мобильных */
@@ -426,12 +480,21 @@ button:active, .pipette-btn:active {
 /* Дополнительные оптимизации для очень маленьких экранов */
 @media screen and (max-width: 480px) {
   /* Еще более жесткие ограничения для слабых устройств */
-  #secondImg {
-    max-height: 50vh;
+  .preview img, .second-preview img, #previewImg, #secondImg {
+    max-height: 45vh;
   }
   
   #stringartCanvas {
     max-height: 40vh;
+  }
+  
+  /* Более компактные элементы на маленьких экранах */
+  .settings {
+    padding: 0 12px;
+  }
+  
+  .palette {
+    padding: 0 12px;
   }
   
   /* Уменьшаем сложность анимаций на слабых устройствах */
