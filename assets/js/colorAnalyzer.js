@@ -482,7 +482,13 @@ class ColorAnalyzer {
       const item = document.createElement('div');
       item.className = 'color-item';
       
-      // Создаем кружок в стиле сопоставления
+      // Детекция Telegram WebApp
+      const isTelegram = window.Telegram?.WebApp?.platform;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                      ('ontouchstart' in window) ||
+                      (navigator.maxTouchPoints > 0);
+      
+      // Создаем кружок как div (всегда)
       const circle = document.createElement('div');
       circle.style.width = '24px';
       circle.style.height = '24px';
@@ -492,11 +498,15 @@ class ColorAnalyzer {
       circle.style.cursor = 'pointer';
       circle.style.flexShrink = '0';
       
-      // Скрытый input для выбора цвета
-      const colorInput = document.createElement('input');
-      colorInput.type = 'color';
-      colorInput.value = color;
-      colorInput.style.display = 'none';
+      let colorInput = null;
+      
+      if (!isTelegram && !isMobile) {
+        // Только на десктопе (не Telegram) используем input[type="color"]
+        colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = color;
+        colorInput.style.display = 'none';
+      }
       
       const code = document.createElement('input');
       code.type = 'text';
@@ -507,22 +517,63 @@ class ColorAnalyzer {
       // Убираем дополнительные кнопки пипеток по просьбе пользователя
       
       // События для изменения цвета
-      circle.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        colorInput.click();
-      });
+      if (isTelegram) {
+        // Для Telegram используем Telegram API или текстовый ввод
+        circle.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Используем Telegram showPopup для ввода цвета
+          if (window.Telegram?.WebApp?.showPopup) {
+            window.Telegram.WebApp.showPopup({
+              title: 'Выбор цвета',
+              message: 'Введите HEX код цвета (например: #ff0000):',
+              buttons: [
+                {id: 'cancel', type: 'cancel'},
+                {id: 'ok', type: 'ok'}
+              ]
+            }, (buttonId) => {
+              if (buttonId === 'ok') {
+                // К сожалению, showPopup не поддерживает ввод текста
+                // Используем prompt как fallback
+                this.showTelegramColorPicker(idx, color, circle, code);
+              }
+            });
+          } else {
+            // Fallback для старых версий Telegram
+            this.showTelegramColorPicker(idx, color, circle, code);
+          }
+        });
+      } else if (colorInput) {
+        // Для десктопа используем стандартный color input
+        circle.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          colorInput.click();
+        });
+        
+        colorInput.addEventListener('input', () => {
+          circle.style.backgroundColor = colorInput.value;
+          code.value = colorInput.value;
+          this.updatePaletteColor(idx, colorInput.value);
+        });
+      } else {
+        // Для мобильных (не Telegram) используем текстовое поле
+        circle.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          code.focus();
+          code.select();
+        });
+      }
       
-      colorInput.addEventListener('input', () => {
-        circle.style.backgroundColor = colorInput.value;
-        code.value = colorInput.value;
-        this.updatePaletteColor(idx, colorInput.value);
-      });
-      
+      // Общий обработчик для текстового поля
       code.addEventListener('input', () => {
         if (/^#[0-9A-F]{6}$/i.test(code.value)) {
           circle.style.backgroundColor = code.value;
-          colorInput.value = code.value;
+          if (colorInput) {
+            colorInput.value = code.value;
+          }
           this.updatePaletteColor(idx, code.value);
         }
       });
@@ -534,10 +585,36 @@ class ColorAnalyzer {
       
       item.appendChild(circle);
       item.appendChild(controls);
-      // Добавляем скрытый input в body для надежности
-      document.body.appendChild(colorInput);
+      // Добавляем скрытый input в body только если он существует
+      if (colorInput) {
+        document.body.appendChild(colorInput);
+      }
       this.elements.paletteDiv.appendChild(item);
     });
+  }
+  
+  // Метод для выбора цвета в Telegram
+  showTelegramColorPicker(idx, currentColor, circle, code) {
+    // Создаем простой prompt для ввода HEX кода
+    const newColor = prompt('Введите HEX код цвета (например: #ff0000):', currentColor);
+    
+    if (newColor && /^#[0-9A-F]{6}$/i.test(newColor)) {
+      circle.style.backgroundColor = newColor;
+      code.value = newColor;
+      this.updatePaletteColor(idx, newColor);
+      
+      // Haptic feedback для Telegram
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
+    } else if (newColor !== null) {
+      // Показываем ошибку только если пользователь не отменил
+      if (window.Telegram?.WebApp?.showAlert) {
+        window.Telegram.WebApp.showAlert('Неверный формат цвета. Используйте формат #RRGGBB (например: #ff0000)');
+      } else {
+        alert('Неверный формат цвета. Используйте формат #RRGGBB (например: #ff0000)');
+      }
+    }
   }
   
   updatePaletteColor(index, color) {

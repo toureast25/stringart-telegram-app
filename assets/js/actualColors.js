@@ -129,7 +129,13 @@ class ActualColors {
       const item = document.createElement('div');
       item.className = 'color-item actual-color-item';
       
-      // Создаем кружок в стиле сопоставления
+      // Детекция Telegram WebApp
+      const isTelegram = window.Telegram?.WebApp?.platform;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                      ('ontouchstart' in window) ||
+                      (navigator.maxTouchPoints > 0);
+      
+      // Создаем кружок как div (всегда)
       const circle = document.createElement('div');
       circle.style.width = '24px';
       circle.style.height = '24px';
@@ -139,11 +145,15 @@ class ActualColors {
       circle.style.cursor = 'pointer';
       circle.style.flexShrink = '0';
       
-      // Скрытый input для выбора цвета
-      const colorInput = document.createElement('input');
-      colorInput.type = 'color';
-      colorInput.value = color;
-      colorInput.style.display = 'none';
+      let colorInput = null;
+      
+      if (!isTelegram && !isMobile) {
+        // Только на десктопе (не Telegram) используем input[type="color"]
+        colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = color;
+        colorInput.style.display = 'none';
+      }
       
       const code = document.createElement('input');
       code.type = 'text';
@@ -158,22 +168,43 @@ class ActualColors {
       removeBtn.onclick = () => this.removeActualColor(index);
       
       // События для изменения цвета
-      circle.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        colorInput.click();
-      });
+      if (isTelegram) {
+        // Для Telegram используем текстовый ввод через prompt
+        circle.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.showTelegramColorPicker(index, color, circle, code);
+        });
+      } else if (colorInput) {
+        // Для десктопа используем стандартный color input
+        circle.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          colorInput.click();
+        });
+        
+        colorInput.addEventListener('input', () => {
+          circle.style.backgroundColor = colorInput.value;
+          code.value = colorInput.value;
+          this.updateActualColor(index, colorInput.value);
+        });
+      } else {
+        // Для мобильных (не Telegram) используем текстовое поле
+        circle.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          code.focus();
+          code.select();
+        });
+      }
       
-      colorInput.addEventListener('input', () => {
-        circle.style.backgroundColor = colorInput.value;
-        code.value = colorInput.value;
-        this.updateActualColor(index, colorInput.value);
-      });
-      
+      // Общий обработчик для текстового поля
       code.addEventListener('input', () => {
         if (/^#[0-9A-F]{6}$/i.test(code.value)) {
           circle.style.backgroundColor = code.value;
-          colorInput.value = code.value;
+          if (colorInput) {
+            colorInput.value = code.value;
+          }
           this.updateActualColor(index, code.value);
         }
       });
@@ -181,8 +212,10 @@ class ActualColors {
       item.appendChild(circle);
       item.appendChild(code);
       item.appendChild(removeBtn);
-      // Добавляем скрытый input в body для надежности
-      document.body.appendChild(colorInput);
+      // Добавляем скрытый input в body только если он существует
+      if (colorInput) {
+        document.body.appendChild(colorInput);
+      }
       this.elements.actualPaletteDiv.appendChild(item);
     });
     
@@ -248,6 +281,30 @@ class ActualColors {
         this.elements.actualPaletteDiv.style.display = 'none';
         this.elements.actualPaletteDiv.offsetHeight;
         this.elements.actualPaletteDiv.style.display = '';
+      }
+    }
+  }
+  
+  // Метод для выбора цвета в Telegram
+  showTelegramColorPicker(index, currentColor, circle, code) {
+    // Создаем простой prompt для ввода HEX кода
+    const newColor = prompt('Введите HEX код цвета (например: #ff0000):', currentColor);
+    
+    if (newColor && /^#[0-9A-F]{6}$/i.test(newColor)) {
+      circle.style.backgroundColor = newColor;
+      code.value = newColor;
+      this.updateActualColor(index, newColor);
+      
+      // Haptic feedback для Telegram
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
+    } else if (newColor !== null) {
+      // Показываем ошибку только если пользователь не отменил
+      if (window.Telegram?.WebApp?.showAlert) {
+        window.Telegram.WebApp.showAlert('Неверный формат цвета. Используйте формат #RRGGBB (например: #ff0000)');
+      } else {
+        alert('Неверный формат цвета. Используйте формат #RRGGBB (например: #ff0000)');
       }
     }
   }
