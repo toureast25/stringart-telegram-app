@@ -85,45 +85,69 @@ class ActualColors {
     }
   }
 
-  // Функция для отображения фактической палитры
+  // Функция для отображения фактической палитры в стиле сопоставления
   renderActualPalette() {
     this.elements.actualPaletteDiv.innerHTML = '';
     
     this.app.state.actualPalette.forEach((color, index) => {
       const item = document.createElement('div');
-      item.className = 'color-item actual-color-item';
+      item.className = 'mapping-item'; // Используем тот же класс что и в сопоставлении
       
-      const circle = document.createElement('input');
-      circle.type = 'color';
-      circle.value = color;
-      circle.className = 'color-circle';
+      const colorsDiv = document.createElement('div');
+      colorsDiv.className = 'mapping-colors';
       
-      const code = document.createElement('input');
-      code.type = 'text';
-      code.value = color;
-      code.className = 'color-code';
-      code.maxLength = 7;
+      // Фактический цвет (в стиле сопоставления)
+      const actualDiv = document.createElement('div');
+      actualDiv.style.display = 'flex';
+      actualDiv.style.alignItems = 'center';
+      actualDiv.style.gap = '8px';
       
+      const actualCircle = document.createElement('div');
+      actualCircle.style.width = '24px';
+      actualCircle.style.height = '24px';
+      actualCircle.style.borderRadius = '50%';
+      actualCircle.style.backgroundColor = color;
+      actualCircle.style.border = '2px solid #fff';
+      actualCircle.style.cursor = 'pointer';
+      
+      const actualLabel = document.createElement('span');
+      actualLabel.textContent = `Фактический ${index + 1}`;
+      actualLabel.style.fontSize = '12px';
+      
+      // Скрытый input для выбора цвета
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.value = color;
+      colorInput.style.display = 'none';
+      
+      // Клик по кругу открывает выбор цвета
+      actualCircle.addEventListener('click', () => {
+        colorInput.click();
+      });
+      
+      colorInput.addEventListener('input', () => {
+        actualCircle.style.backgroundColor = colorInput.value;
+        this.updateActualColor(index, colorInput.value);
+      });
+      
+      actualDiv.appendChild(actualCircle);
+      actualDiv.appendChild(actualLabel);
+      actualDiv.appendChild(colorInput);
+      
+      // Кнопка удаления
       const removeBtn = document.createElement('button');
       removeBtn.innerHTML = '×';
       removeBtn.className = 'remove-color-btn';
       removeBtn.title = 'Удалить цвет';
+      removeBtn.style.marginLeft = '10px';
+      removeBtn.style.padding = '2px 6px';
+      removeBtn.style.fontSize = '14px';
       removeBtn.onclick = () => this.removeActualColor(index);
       
-      // События для изменения цвета
-      circle.addEventListener('input', () => {
-        code.value = circle.value;
-        this.updateActualColor(index, circle.value);
-      });
+      colorsDiv.appendChild(actualDiv);
+      colorsDiv.appendChild(removeBtn);
       
-      code.addEventListener('input', () => {
-        circle.value = code.value;
-        this.updateActualColor(index, code.value);
-      });
-      
-      item.appendChild(circle);
-      item.appendChild(code);
-      item.appendChild(removeBtn);
+      item.appendChild(colorsDiv);
       this.elements.actualPaletteDiv.appendChild(item);
     });
   }

@@ -66,7 +66,7 @@ class StringArtGenerator {
     const nails = parseInt(this.elements.nailCount.value);
     
     // Вычисляем пропорциональные размеры canvas на основе исходного изображения
-    const maxSize = 310; // максимальный размер в пикселях
+    const maxSize = 620; // удваиваем разрешение превью
     const aspectRatio = this.app.state.originalHeight / this.app.state.originalWidth;
     
     let canvasWidth, canvasHeight;

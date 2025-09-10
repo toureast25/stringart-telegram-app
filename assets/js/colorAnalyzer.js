@@ -461,14 +461,7 @@ class ColorAnalyzer {
       code.className = 'color-code';
       code.maxLength = 7;
       
-      const pipBtn = document.createElement('button');
-      pipBtn.innerHTML = '🖌️';
-      pipBtn.title = 'Выбрать цвет с изображения';
-      pipBtn.className = 'pipette-btn';
-      pipBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.openPipette(idx);
-      });
+      // Убираем дополнительные кнопки пипеток по просьбе пользователя
       
       // События для изменения цвета
       circle.addEventListener('input', () => {
@@ -484,7 +477,7 @@ class ColorAnalyzer {
       const controls = document.createElement('div');
       controls.className = 'color-controls';
       controls.appendChild(code);
-      controls.appendChild(pipBtn);
+      // Убираем добавление кнопки пипетки
       
       item.appendChild(circle);
       item.appendChild(controls);

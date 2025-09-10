@@ -497,6 +497,11 @@ button:active, .pipette-btn:active {
     padding: 0 12px;
   }
   
+  /* Исправляем кнопки на мобильном - добавляем отступы от краев */
+  header.app-header button {
+    margin: 0 8px 8px 0;
+  }
+  
   /* Уменьшаем сложность анимаций на слабых устройствах */
   .loading-spinner {
     animation-duration: 1.5s; /* Замедляем анимацию */
