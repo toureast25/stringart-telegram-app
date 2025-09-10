@@ -62,7 +62,7 @@ class ImageProcessor {
       clearTimeout(blurTimeout);
       blurTimeout = setTimeout(() => {
         this.applyResolution();
-      }, 25); // Задержка 25ms
+      }, 17); // Задержка 17ms
     };
     
     // Обработчики для настроек разрешения - добавляем множественные события для мобильных
@@ -334,14 +334,14 @@ class ImageProcessor {
         if (this.app.colorAnalyzer) {
           this.app.colorAnalyzer.extractPalette();
         }
-      }, 25);
+      }, 17);
       
       // Дополнительная попытка через больший интервал для мобильных устройств
       setTimeout(() => {
         if (this.app.colorAnalyzer && this.elements.secondImg.complete) {
           this.app.colorAnalyzer.extractPalette();
         }
-      }, 75);
+      }, 52);
       
       // Специальная обработка для Telegram WebApp - еще более агрессивный пересчет
       if (this.isTelegramWebApp()) {
@@ -354,7 +354,7 @@ class ImageProcessor {
               this.app.actualColors.update();
             }
           }
-        }, 125);
+        }, 87);
       }
     };
     img.src = this.app.state.originalImage;

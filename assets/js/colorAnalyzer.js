@@ -42,7 +42,7 @@ class ColorAnalyzer {
       clearTimeout(paletteTimeout);
       paletteTimeout = setTimeout(() => {
         this.extractPalette();
-      }, 75); // 75ms задержка для тяжелых операций
+      }, 52); // 52ms задержка для тяжелых операций
     };
     
     let tonesTimeout;
@@ -50,7 +50,7 @@ class ColorAnalyzer {
       clearTimeout(tonesTimeout);
       tonesTimeout = setTimeout(() => {
         this.handleTonesCountChange();
-      }, 50); // 50ms для средних операций
+      }, 35); // 35ms для средних операций
     };
     
     // Обработчики для метода кластеризации
@@ -79,7 +79,7 @@ class ColorAnalyzer {
       clearTimeout(bgTimeout);
       bgTimeout = setTimeout(() => {
         this.recalculateBackgroundColor();
-      }, 50);
+      }, 35);
     };
     
     // Обработчики для настроек фона

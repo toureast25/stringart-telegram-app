@@ -26,7 +26,7 @@ class StringArtGenerator {
       clearTimeout(previewTimeout);
       previewTimeout = setTimeout(() => {
         this.generatePreview();
-      }, 62); // 62ms для визуальных обновлений
+      }, 43); // 43ms для визуальных обновлений
     };
     
     // Обработчики для настроек StringArt
