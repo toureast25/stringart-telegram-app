@@ -649,8 +649,43 @@ class ColorAnalyzer {
       overlay.style.display = 'flex';
     };
     
+    // Scroll lock helpers
+    let savedScrollY = 0;
+    let savedOverflow = '';
+    let savedPosition = '';
+    let savedTop = '';
+    let savedWidth = '';
+    const preventTouchScroll = (e) => { e.preventDefault(); };
+
+    const lockScroll = () => {
+      try {
+        savedScrollY = window.scrollY || window.pageYOffset || 0;
+        savedOverflow = document.body.style.overflow;
+        savedPosition = document.body.style.position;
+        savedTop = document.body.style.top;
+        savedWidth = document.body.style.width;
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${savedScrollY}px`;
+        document.body.style.width = '100%';
+        modal.addEventListener('touchmove', preventTouchScroll, { passive: false });
+      } catch (_) {}
+    };
+
+    const unlockScroll = () => {
+      try {
+        modal.removeEventListener('touchmove', preventTouchScroll);
+        document.body.style.overflow = savedOverflow;
+        document.body.style.position = savedPosition;
+        document.body.style.top = savedTop;
+        document.body.style.width = savedWidth;
+        window.scrollTo(0, savedScrollY || 0);
+      } catch (_) {}
+    };
+
     const close = () => {
       modal.style.display = 'none';
+      unlockScroll();
       hexInput.removeEventListener('input', onHexInput);
       rInput.removeEventListener('input', onR);
       gInput.removeEventListener('input', onG);
@@ -658,6 +693,7 @@ class ColorAnalyzer {
       okBtn.removeEventListener('click', onOk);
       cancelBtn.removeEventListener('click', onCancel);
       pipetteBtn.removeEventListener('click', onPipette);
+      modal.removeEventListener('click', onBackdropClick);
     };
     
     hexInput.addEventListener('input', onHexInput);
@@ -866,7 +902,11 @@ class ColorAnalyzer {
     
     // Показываем модальное окно
     console.log('Показываем модальное окно');
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
+    // Центрируем и блокируем прокрутку страницы, затемняем весь UI
+    lockScroll();
+    const onBackdropClick = (e) => { if (e.target === modal) close(); };
+    modal.addEventListener('click', onBackdropClick);
     console.log('Модальное окно показано, display:', modal.style.display);
     
     // Обработчик закрытия
