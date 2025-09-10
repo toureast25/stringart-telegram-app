@@ -53,8 +53,10 @@ class ImageProcessor {
     
     // Функция для обновления размытия
     const updateBlur = (value) => {
-      this.elements.blurInput.value = value;
-      this.elements.blurRange.value = value;
+      const blurValue = parseFloat(value) || 0;
+      this.elements.blurInput.value = blurValue;
+      this.elements.blurRange.value = blurValue;
+      console.log('Blur updated to:', blurValue); // Отладочная информация
       this.applyResolution();
     };
     
@@ -253,9 +255,31 @@ class ImageProcessor {
       this.snapshotCanvas.height = img.height * scale;
       
       // Применяем размытие
-      ctx.filter = `blur(${this.elements.blurInput.value}px)`;
-      ctx.drawImage(img, 0, 0, this.snapshotCanvas.width, this.snapshotCanvas.height);
-      ctx.filter = '';
+      const blurValue = parseFloat(this.elements.blurInput.value) || 0;
+      console.log('Applying blur:', blurValue, 'px'); // Отладочная информация
+      
+      if (blurValue > 0) {
+        // Проверяем поддержку filter в canvas
+        const supportsFilter = 'filter' in ctx;
+        console.log('Canvas filter support:', supportsFilter); // Отладочная информация
+        
+        if (supportsFilter) {
+          // Современные браузеры
+          const filterValue = `blur(${blurValue}px)`;
+          ctx.filter = filterValue;
+          console.log('Applied canvas filter:', filterValue); // Отладочная информация
+          ctx.drawImage(img, 0, 0, this.snapshotCanvas.width, this.snapshotCanvas.height);
+          ctx.filter = 'none'; // Сбрасываем фильтр
+        } else {
+          // Fallback для старых браузеров - рисуем без размытия, но применим CSS
+          ctx.drawImage(img, 0, 0, this.snapshotCanvas.width, this.snapshotCanvas.height);
+          console.warn('Canvas filter not supported, using CSS fallback');
+        }
+      } else {
+        // Без размытия
+        ctx.drawImage(img, 0, 0, this.snapshotCanvas.width, this.snapshotCanvas.height);
+        console.log('No blur applied'); // Отладочная информация
+      }
       
       // Обновляем второе изображение
       this.elements.secondImg.onload = () => {
@@ -268,6 +292,16 @@ class ImageProcessor {
       
       this.elements.secondImg.src = this.snapshotCanvas.toDataURL('image/png');
       this.elements.secondImg.style.width = '100%';
+      
+      // Применяем CSS размытие как дополнительный fallback
+      if (blurValue > 0) {
+        const cssFilter = `blur(${blurValue}px)`;
+        this.elements.secondImg.style.filter = cssFilter;
+        console.log('Applied CSS filter:', cssFilter); // Отладочная информация
+      } else {
+        this.elements.secondImg.style.filter = 'none';
+        console.log('Removed CSS filter'); // Отладочная информация
+      }
     };
     img.src = this.app.state.originalImage;
   }
@@ -311,6 +345,7 @@ class ImageProcessor {
     this.elements.previewImg.removeAttribute('src');
     this.elements.preview.classList.remove('active');
     this.elements.secondImg.removeAttribute('src');
+    this.elements.secondImg.style.filter = 'none'; // Сбрасываем CSS размытие
     this.elements.secondPreview.classList.remove('active');
     this.elements.cameraStream.style.display = 'none';
     
