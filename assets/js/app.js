@@ -45,6 +45,22 @@ class StringArtApp {
       // НЕ загружаем тестовое изображение автоматически - пользователь сам выберет
       // this.loadDefaultImage();
       
+      // Принудительное обновление фактической палитры для мобильных при инициализации
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                      window.Telegram?.WebApp?.platform ||
+                      ('ontouchstart' in window) ||
+                      (navigator.maxTouchPoints > 0);
+      
+      if (isMobile && this.actualColors) {
+        setTimeout(() => {
+          this.actualColors.renderActualPalette();
+        }, 500);
+        
+        setTimeout(() => {
+          this.actualColors.renderActualPalette();
+        }, 1500);
+      }
+      
       console.log('StringArt App initialized successfully');
     } catch (error) {
       console.error('Failed to initialize app:', error);

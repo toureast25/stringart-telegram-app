@@ -87,11 +87,34 @@ class ActualColors {
 
   // Функция для отображения фактической палитры
   renderActualPalette() {
+    // Детекция мобильных устройств
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                    window.Telegram?.WebApp?.platform ||
+                    ('ontouchstart' in window) ||
+                    (navigator.maxTouchPoints > 0);
+    
     // Принудительное обновление для мобильных устройств
     if (this.elements.actualPaletteDiv) {
       this.elements.actualPaletteDiv.innerHTML = '';
-      // Принудительный reflow для мобильных браузеров
-      this.elements.actualPaletteDiv.offsetHeight;
+      
+      if (isMobile) {
+        // Экстремальные меры для мобильных
+        this.elements.actualPaletteDiv.style.visibility = 'hidden';
+        this.elements.actualPaletteDiv.style.display = 'none';
+        this.elements.actualPaletteDiv.offsetHeight;
+        this.elements.actualPaletteDiv.style.display = '';
+        this.elements.actualPaletteDiv.style.visibility = 'visible';
+        
+        // Принудительное перерисовывание всей секции
+        const parentSection = this.elements.actualPaletteDiv.closest('.second-preview');
+        if (parentSection) {
+          parentSection.style.transform = 'translateZ(0)';
+          parentSection.offsetHeight;
+        }
+      } else {
+        // Обычный reflow для десктопа
+        this.elements.actualPaletteDiv.offsetHeight;
+      }
     }
     
     this.app.state.actualPalette.forEach((color, index) => {
@@ -152,30 +175,69 @@ class ActualColors {
       this.elements.actualPaletteDiv.appendChild(item);
     });
     
-    // Принудительное обновление отображения для всех устройств
+    // Принудительное обновление отображения с мобильными хаками
     if (this.elements.actualPaletteDiv) {
-      // Всегда применяем агрессивное обновление для стабильности
-      this.elements.actualPaletteDiv.style.display = 'none';
-      this.elements.actualPaletteDiv.offsetHeight; // Принудительный reflow
-      this.elements.actualPaletteDiv.style.display = '';
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                      window.Telegram?.WebApp?.platform ||
+                      ('ontouchstart' in window) ||
+                      (navigator.maxTouchPoints > 0);
       
-      // Дополнительное обновление через setTimeout для всех устройств
-      setTimeout(() => {
-        if (this.elements.actualPaletteDiv) {
-          this.elements.actualPaletteDiv.style.transform = 'translateZ(0)';
-          this.elements.actualPaletteDiv.offsetHeight;
-          this.elements.actualPaletteDiv.style.transform = '';
-          
-          // Еще один цикл обновления для особо упрямых браузеров
-          setTimeout(() => {
-            if (this.elements.actualPaletteDiv) {
-              this.elements.actualPaletteDiv.classList.add('force-refresh');
-              this.elements.actualPaletteDiv.offsetHeight;
-              this.elements.actualPaletteDiv.classList.remove('force-refresh');
+      if (isMobile) {
+        // ЭКСТРЕМАЛЬНЫЕ меры для мобильных браузеров
+        
+        // Шаг 1: Полное скрытие и принудительный reflow
+        this.elements.actualPaletteDiv.style.visibility = 'hidden';
+        this.elements.actualPaletteDiv.style.display = 'none';
+        this.elements.actualPaletteDiv.offsetHeight;
+        
+        // Шаг 2: Восстановление с задержкой
+        setTimeout(() => {
+          if (this.elements.actualPaletteDiv) {
+            this.elements.actualPaletteDiv.style.display = '';
+            this.elements.actualPaletteDiv.style.visibility = 'visible';
+            this.elements.actualPaletteDiv.offsetHeight;
+            
+            // Шаг 3: Transform хаки
+            this.elements.actualPaletteDiv.style.transform = 'translateZ(0) scale(1)';
+            this.elements.actualPaletteDiv.offsetHeight;
+            this.elements.actualPaletteDiv.style.transform = '';
+            
+            // Шаг 4: Принудительное перерисовывание родителя
+            const parent = this.elements.actualPaletteDiv.parentElement;
+            if (parent) {
+              parent.style.transform = 'translateZ(0)';
+              parent.offsetHeight;
+              parent.style.transform = '';
             }
-          }, 100);
-        }
-      }, 50);
+            
+            // Шаг 5: Финальный CSS класс
+            setTimeout(() => {
+              if (this.elements.actualPaletteDiv) {
+                this.elements.actualPaletteDiv.classList.add('force-refresh');
+                this.elements.actualPaletteDiv.offsetHeight;
+                this.elements.actualPaletteDiv.classList.remove('force-refresh');
+                
+                // Шаг 6: Telegram-specific хак
+                if (window.Telegram?.WebApp) {
+                  window.Telegram.WebApp.expand();
+                  setTimeout(() => {
+                    if (this.elements.actualPaletteDiv) {
+                      this.elements.actualPaletteDiv.style.opacity = '0.99';
+                      this.elements.actualPaletteDiv.offsetHeight;
+                      this.elements.actualPaletteDiv.style.opacity = '';
+                    }
+                  }, 50);
+                }
+              }
+            }, 100);
+          }
+        }, 50);
+      } else {
+        // Обычное обновление для десктопа
+        this.elements.actualPaletteDiv.style.display = 'none';
+        this.elements.actualPaletteDiv.offsetHeight;
+        this.elements.actualPaletteDiv.style.display = '';
+      }
     }
   }
   
@@ -409,10 +471,34 @@ class ActualColors {
       this.lastActualPalette = state.actualPalette;
       this.renderActualPalette();
       
-      // Дополнительный принудительный вызов для упрямых браузеров
-      setTimeout(() => {
-        this.renderActualPalette();
-      }, 200);
+      // Мобильная детекция для дополнительных вызовов
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                      window.Telegram?.WebApp?.platform ||
+                      ('ontouchstart' in window) ||
+                      (navigator.maxTouchPoints > 0);
+      
+      if (isMobile) {
+        // Тройной вызов для мобильных с увеличенными задержками
+        setTimeout(() => {
+          this.renderActualPalette();
+        }, 300);
+        
+        setTimeout(() => {
+          this.renderActualPalette();
+        }, 600);
+        
+        // Финальный вызов для Telegram
+        if (window.Telegram?.WebApp) {
+          setTimeout(() => {
+            this.renderActualPalette();
+          }, 1000);
+        }
+      } else {
+        // Обычный дополнительный вызов для десктопа
+        setTimeout(() => {
+          this.renderActualPalette();
+        }, 200);
+      }
     }
     
     if (state.colorMapping !== this.lastColorMapping) {

@@ -166,6 +166,32 @@ input[type="color"][style*="display: none"] {
   will-change: transform !important;
 }
 
+/* Специальные стили для мобильных браузеров */
+@media screen and (max-width: 768px) {
+  .palette, #actualPalette {
+    /* Принудительное аппаратное ускорение */
+    transform: translateZ(0);
+    will-change: contents;
+    contain: layout style paint;
+    
+    /* Предотвращение кэширования DOM */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    
+    /* Принудительное перерисовывание */
+    -webkit-transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    -ms-transform: translateZ(0);
+    -o-transform: translateZ(0);
+  }
+  
+  /* Принудительное обновление для цветовых элементов */
+  .color-item, .actual-color-item {
+    will-change: contents;
+    contain: layout;
+  }
+}
+
 .color-code {
   font-size: clamp(10px, 2vw, 14px);
   margin-top: 4px;
