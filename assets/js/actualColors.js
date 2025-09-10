@@ -97,6 +97,14 @@ class ActualColors {
     if (this.elements.actualPaletteDiv) {
       this.elements.actualPaletteDiv.innerHTML = '';
       
+      // Очищаем старые скрытые color input из body
+      const oldColorInputs = document.querySelectorAll('input[type="color"][style*="display: none"]');
+      oldColorInputs.forEach(input => {
+        if (input.parentNode === document.body) {
+          document.body.removeChild(input);
+        }
+      });
+      
       if (isMobile) {
         // Экстремальные меры для мобильных
         this.elements.actualPaletteDiv.style.visibility = 'hidden';
@@ -150,7 +158,9 @@ class ActualColors {
       removeBtn.onclick = () => this.removeActualColor(index);
       
       // События для изменения цвета
-      circle.addEventListener('click', () => {
+      circle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         colorInput.click();
       });
       
@@ -171,7 +181,8 @@ class ActualColors {
       item.appendChild(circle);
       item.appendChild(code);
       item.appendChild(removeBtn);
-      item.appendChild(colorInput); // Добавляем скрытый input
+      // Добавляем скрытый input в body для надежности
+      document.body.appendChild(colorInput);
       this.elements.actualPaletteDiv.appendChild(item);
     });
     

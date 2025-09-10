@@ -139,6 +139,12 @@ class ColorAnalyzer {
       this.elements.bgColorPicker.value = color;
     }
     
+    // Обновляем текстовое отображение цвета
+    const currentBgColor = document.getElementById('currentBgColor');
+    if (currentBgColor) {
+      currentBgColor.textContent = color;
+    }
+    
     // Реактивное обновление палитры и карт при изменении фона
     if (this.app.state.currentPalette.length > 0) {
       // Обновляем первый элемент палитры (фон)
@@ -462,6 +468,14 @@ class ColorAnalyzer {
   renderPalette() {
     this.elements.paletteDiv.innerHTML = '';
     
+    // Очищаем старые скрытые color input из body
+    const oldColorInputs = document.querySelectorAll('input[type="color"][style*="display: none"]');
+    oldColorInputs.forEach(input => {
+      if (input.parentNode === document.body) {
+        document.body.removeChild(input);
+      }
+    });
+    
     this.app.state.currentPalette.forEach((color, idx) => {
       if (idx === 0) return; // Пропускаем фон
       
@@ -493,7 +507,9 @@ class ColorAnalyzer {
       // Убираем дополнительные кнопки пипеток по просьбе пользователя
       
       // События для изменения цвета
-      circle.addEventListener('click', () => {
+      circle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         colorInput.click();
       });
       
@@ -518,7 +534,8 @@ class ColorAnalyzer {
       
       item.appendChild(circle);
       item.appendChild(controls);
-      item.appendChild(colorInput); // Добавляем скрытый input
+      // Добавляем скрытый input в body для надежности
+      document.body.appendChild(colorInput);
       this.elements.paletteDiv.appendChild(item);
     });
   }
