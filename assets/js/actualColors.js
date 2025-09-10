@@ -93,10 +93,21 @@ class ActualColors {
       const item = document.createElement('div');
       item.className = 'color-item actual-color-item';
       
-      const circle = document.createElement('input');
-      circle.type = 'color';
-      circle.value = color;
-      circle.className = 'color-circle';
+      // Создаем кружок в стиле сопоставления
+      const circle = document.createElement('div');
+      circle.style.width = '24px';
+      circle.style.height = '24px';
+      circle.style.borderRadius = '50%';
+      circle.style.backgroundColor = color;
+      circle.style.border = '2px solid #fff';
+      circle.style.cursor = 'pointer';
+      circle.style.flexShrink = '0';
+      
+      // Скрытый input для выбора цвета
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.value = color;
+      colorInput.style.display = 'none';
       
       const code = document.createElement('input');
       code.type = 'text';
@@ -111,19 +122,28 @@ class ActualColors {
       removeBtn.onclick = () => this.removeActualColor(index);
       
       // События для изменения цвета
-      circle.addEventListener('input', () => {
-        code.value = circle.value;
-        this.updateActualColor(index, circle.value);
+      circle.addEventListener('click', () => {
+        colorInput.click();
+      });
+      
+      colorInput.addEventListener('input', () => {
+        circle.style.backgroundColor = colorInput.value;
+        code.value = colorInput.value;
+        this.updateActualColor(index, colorInput.value);
       });
       
       code.addEventListener('input', () => {
-        circle.value = code.value;
-        this.updateActualColor(index, code.value);
+        if (/^#[0-9A-F]{6}$/i.test(code.value)) {
+          circle.style.backgroundColor = code.value;
+          colorInput.value = code.value;
+          this.updateActualColor(index, code.value);
+        }
       });
       
       item.appendChild(circle);
       item.appendChild(code);
       item.appendChild(removeBtn);
+      item.appendChild(colorInput); // Добавляем скрытый input
       this.elements.actualPaletteDiv.appendChild(item);
     });
   }
@@ -219,8 +239,12 @@ class ActualColors {
       calculatedDiv.style.gap = '8px';
       
       const calculatedCircle = document.createElement('div');
-      calculatedCircle.className = 'color-circle-display'; // Унифицированный класс
+      calculatedCircle.style.width = '24px';
+      calculatedCircle.style.height = '24px';
+      calculatedCircle.style.borderRadius = '50%';
       calculatedCircle.style.backgroundColor = mapping.calculatedColor;
+      calculatedCircle.style.border = '2px solid #fff';
+      calculatedCircle.style.flexShrink = '0';
       
       const calculatedLabel = document.createElement('span');
       calculatedLabel.textContent = `Расчётный ${index + 1}`;
@@ -241,8 +265,12 @@ class ActualColors {
       actualDiv.style.gap = '8px';
       
       const actualCircle = document.createElement('div');
-      actualCircle.className = 'color-circle-display'; // Унифицированный класс
+      actualCircle.style.width = '24px';
+      actualCircle.style.height = '24px';
+      actualCircle.style.borderRadius = '50%';
       actualCircle.style.backgroundColor = mapping.actualColor;
+      actualCircle.style.border = '2px solid #fff';
+      actualCircle.style.flexShrink = '0';
       
       const actualLabel = document.createElement('span');
       actualLabel.textContent = `Фактический ${mapping.actualIndex + 1}`;

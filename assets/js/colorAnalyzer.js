@@ -450,10 +450,21 @@ class ColorAnalyzer {
       const item = document.createElement('div');
       item.className = 'color-item';
       
-      const circle = document.createElement('input');
-      circle.type = 'color';
-      circle.value = color;
-      circle.className = 'color-circle';
+      // Создаем кружок в стиле сопоставления
+      const circle = document.createElement('div');
+      circle.style.width = '24px';
+      circle.style.height = '24px';
+      circle.style.borderRadius = '50%';
+      circle.style.backgroundColor = color;
+      circle.style.border = '2px solid #fff';
+      circle.style.cursor = 'pointer';
+      circle.style.flexShrink = '0';
+      
+      // Скрытый input для выбора цвета
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.value = color;
+      colorInput.style.display = 'none';
       
       const code = document.createElement('input');
       code.type = 'text';
@@ -464,14 +475,22 @@ class ColorAnalyzer {
       // Убираем дополнительные кнопки пипеток по просьбе пользователя
       
       // События для изменения цвета
-      circle.addEventListener('input', () => {
-        code.value = circle.value;
-        this.updatePaletteColor(idx, circle.value);
+      circle.addEventListener('click', () => {
+        colorInput.click();
+      });
+      
+      colorInput.addEventListener('input', () => {
+        circle.style.backgroundColor = colorInput.value;
+        code.value = colorInput.value;
+        this.updatePaletteColor(idx, colorInput.value);
       });
       
       code.addEventListener('input', () => {
-        circle.value = code.value;
-        this.updatePaletteColor(idx, code.value);
+        if (/^#[0-9A-F]{6}$/i.test(code.value)) {
+          circle.style.backgroundColor = code.value;
+          colorInput.value = code.value;
+          this.updatePaletteColor(idx, code.value);
+        }
       });
       
       const controls = document.createElement('div');
@@ -481,6 +500,7 @@ class ColorAnalyzer {
       
       item.appendChild(circle);
       item.appendChild(controls);
+      item.appendChild(colorInput); // Добавляем скрытый input
       this.elements.paletteDiv.appendChild(item);
     });
   }

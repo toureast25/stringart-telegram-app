@@ -152,27 +152,12 @@
   min-width: 80px;
 }
 
-/* Унифицированные цветовые кружки */
-.color-circle, .color-circle-display {
-  width: clamp(28px, 6vw, 40px);
-  height: clamp(28px, 6vw, 40px);
-  border-radius: 50%;
-  border: 2px solid #fff;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-/* Для input[type="color"] */
-.color-circle {
-  -webkit-appearance: none;
-  appearance: none;
-  padding: 0;
-}
-
-/* Для div элементов отображения */
-.color-circle-display {
-  display: inline-block;
-  flex-shrink: 0;
+/* Все цветовые кружки теперь унифицированы через JavaScript с фиксированным размером 24px */
+/* Скрытые input для выбора цвета */
+input[type="color"][style*="display: none"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .color-code {
