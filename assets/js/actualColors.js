@@ -167,43 +167,20 @@ class ActualColors {
       removeBtn.title = 'Удалить цвет';
       removeBtn.onclick = () => this.removeActualColor(index);
       
-      // События для изменения цвета
-      if (isTelegram) {
-        // Для Telegram используем текстовый ввод через prompt
-        circle.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          this.showTelegramColorPicker(index, color, circle, code);
-        });
-      } else if (colorInput) {
-        // Для десктопа используем стандартный color input
-        circle.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          colorInput.click();
-        });
-        
-        colorInput.addEventListener('input', () => {
-          circle.style.backgroundColor = colorInput.value;
-          code.value = colorInput.value;
-          this.updateActualColor(index, colorInput.value);
-        });
-      } else {
-        // Для мобильных (не Telegram) используем палитру цветов
-        circle.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (this.app.colorAnalyzer) {
-            this.app.colorAnalyzer.showColorPalette((selectedColor) => {
-              if (selectedColor) {
-                circle.style.backgroundColor = selectedColor;
-                code.value = selectedColor;
-                this.updateActualColor(index, selectedColor);
-              }
-            });
-          }
-        });
-      }
+      // События для изменения цвета — открываем единый RGB-редактор
+      circle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.app.colorAnalyzer) {
+          this.app.colorAnalyzer.openColorEditor(color, (selectedColor) => {
+            if (selectedColor) {
+              circle.style.backgroundColor = selectedColor;
+              code.value = selectedColor;
+              this.updateActualColor(index, selectedColor);
+            }
+          });
+        }
+      });
       
       // Общий обработчик для текстового поля
       code.addEventListener('input', () => {
