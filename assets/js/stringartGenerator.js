@@ -20,18 +20,25 @@ class StringArtGenerator {
   }
   
   bindEvents() {
+    // Debouncing для генерации превью
+    let previewTimeout;
+    const debouncedGeneratePreview = () => {
+      clearTimeout(previewTimeout);
+      previewTimeout = setTimeout(() => {
+        this.generatePreview();
+      }, 250); // 250ms для визуальных обновлений
+    };
+    
     // Обработчики для настроек StringArt
     this.elements.canvasShape?.addEventListener('change', () => {
-      this.generatePreview();
+      this.generatePreview(); // Без debouncing для dropdown
     });
     
     this.elements.canvasSize?.addEventListener('change', () => {
-      this.generatePreview();
+      this.generatePreview(); // Без debouncing для dropdown
     });
     
-    this.elements.nailCount?.addEventListener('input', () => {
-      this.generatePreview();
-    });
+    this.elements.nailCount?.addEventListener('input', debouncedGeneratePreview);
   }
   
   generatePreview() {

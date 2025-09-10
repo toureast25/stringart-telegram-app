@@ -7,6 +7,13 @@ class ColorAnalyzer {
   constructor(app) {
     this.app = app;
     
+    // Кеш для оптимизации производительности
+    this.cache = {
+      lastImageSrc: null,
+      lastPalette: null,
+      colorMaps: null
+    };
+    
     this.elements = {
       clusteringMethod: document.getElementById('clusteringMethod'),
       colorCount: document.getElementById('colorCount'),
@@ -29,10 +36,27 @@ class ColorAnalyzer {
   }
   
   bindEvents() {
+    // Debouncing для тяжелых операций
+    let paletteTimeout;
+    const debouncedExtractPalette = () => {
+      clearTimeout(paletteTimeout);
+      paletteTimeout = setTimeout(() => {
+        this.extractPalette();
+      }, 300); // 300ms задержка для тяжелых операций
+    };
+    
+    let tonesTimeout;
+    const debouncedTonesChange = () => {
+      clearTimeout(tonesTimeout);
+      tonesTimeout = setTimeout(() => {
+        this.handleTonesCountChange();
+      }, 200); // 200ms для средних операций
+    };
+    
     // Обработчики для метода кластеризации
     this.elements.clusteringMethod?.addEventListener('change', () => {
       this.updateMethodInterface();
-      this.extractPalette();
+      this.extractPalette(); // Без debouncing для dropdown
     });
     
     // Обработчики для количества цветов
@@ -40,26 +64,32 @@ class ColorAnalyzer {
       if (this.elements.clusteringMethod.value === 'tones') {
         this.updateTonesProportions();
       }
-      this.extractPalette();
+      this.extractPalette(); // Без debouncing для dropdown
     });
     
-    // Обработчики для метода по тонам
-    this.elements.minDeltaEInput?.addEventListener('input', () => this.extractPalette());
-    this.elements.darkCount?.addEventListener('input', () => this.handleTonesCountChange());
-    this.elements.midCount?.addEventListener('input', () => this.handleTonesCountChange());
-    this.elements.lightCount?.addEventListener('input', () => this.handleTonesCountChange());
+    // Обработчики для метода по тонам с debouncing
+    this.elements.minDeltaEInput?.addEventListener('input', debouncedExtractPalette);
+    this.elements.darkCount?.addEventListener('input', debouncedTonesChange);
+    this.elements.midCount?.addEventListener('input', debouncedTonesChange);
+    this.elements.lightCount?.addEventListener('input', debouncedTonesChange);
+    
+    // Debouncing для фоновых настроек
+    let bgTimeout;
+    const debouncedBackgroundRecalc = () => {
+      clearTimeout(bgTimeout);
+      bgTimeout = setTimeout(() => {
+        this.recalculateBackgroundColor();
+      }, 200);
+    };
     
     // Обработчики для настроек фона
     this.elements.bgColorPicker?.addEventListener('input', (e) => {
       this.setBackgroundColorAndUpdate(e.target.value);
     });
     
-    this.elements.bgEdgePercent?.addEventListener('input', () => {
-      this.recalculateBackgroundColor();
-    });
-    
+    this.elements.bgEdgePercent?.addEventListener('input', debouncedBackgroundRecalc);
     this.elements.bgEdgePercent?.addEventListener('change', () => {
-      this.recalculateBackgroundColor();
+      this.recalculateBackgroundColor(); // Без debouncing для окончательного изменения
     });
     
     // Обработчик для кнопки автоматического определения фона
@@ -159,10 +189,17 @@ class ColorAnalyzer {
     ctx.drawImage(secondImg, 0, 0);
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     
-    // Собираем цвета из изображения (каждый 4-й пиксель для производительности)
+    // Собираем цвета из изображения (оптимизированное семплирование)
     let sampleColors = [];
-    for (let i = 0; i < data.length; i += 4 * 4) {
+    const step = this.isMobileDevice() ? 4 * 8 : 4 * 6; // Меньше семплов на мобильных
+    for (let i = 0; i < data.length; i += step) {
       sampleColors.push([data[i], data[i + 1], data[i + 2]]);
+    }
+    
+    // Ограничиваем количество семплов для производительности
+    if (sampleColors.length > 5000) {
+      const ratio = Math.floor(sampleColors.length / 5000);
+      sampleColors = sampleColors.filter((_, index) => index % ratio === 0);
     }
     
     const method = this.elements.clusteringMethod.value;
@@ -393,10 +430,22 @@ class ColorAnalyzer {
   }
   
   generateColorMaps() {
-    this.elements.colorMaps.innerHTML = '';
-    
     const secondImg = document.getElementById('secondImg');
     if (!secondImg.src || this.app.state.currentPalette.length === 0) return;
+    
+    // Проверяем кеш для оптимизации
+    const currentImageSrc = secondImg.src;
+    const currentPalette = JSON.stringify(this.app.state.currentPalette);
+    
+    if (this.cache.lastImageSrc === currentImageSrc && 
+        this.cache.lastPalette === currentPalette && 
+        this.cache.colorMaps) {
+      // Используем кешированные маски
+      this.elements.colorMaps.innerHTML = this.cache.colorMaps;
+      return;
+    }
+    
+    this.elements.colorMaps.innerHTML = '';
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -456,6 +505,11 @@ class ColorAnalyzer {
       mapContainer.appendChild(label);
       this.elements.colorMaps.appendChild(mapContainer);
     });
+    
+    // Сохраняем в кеш для оптимизации
+    this.cache.lastImageSrc = currentImageSrc;
+    this.cache.lastPalette = currentPalette;
+    this.cache.colorMaps = this.elements.colorMaps.innerHTML;
   }
   
   openPipette(colorIndex) {
