@@ -656,6 +656,9 @@ class ColorAnalyzer {
     let savedTop = '';
     let savedWidth = '';
     const preventTouchScroll = (e) => { e.preventDefault(); };
+    const scrollContainer = document.querySelector('.container');
+    let savedContainerOverflow = '';
+    let savedContainerPosition = '';
 
     const lockScroll = () => {
       try {
@@ -669,6 +672,12 @@ class ColorAnalyzer {
         document.body.style.top = `-${savedScrollY}px`;
         document.body.style.width = '100%';
         modal.addEventListener('touchmove', preventTouchScroll, { passive: false });
+        if (scrollContainer) {
+          savedContainerOverflow = scrollContainer.style.overflow;
+          savedContainerPosition = scrollContainer.style.position;
+          scrollContainer.style.overflow = 'hidden';
+          scrollContainer.style.position = 'relative';
+        }
       } catch (_) {}
     };
 
@@ -679,6 +688,10 @@ class ColorAnalyzer {
         document.body.style.position = savedPosition;
         document.body.style.top = savedTop;
         document.body.style.width = savedWidth;
+        if (scrollContainer) {
+          scrollContainer.style.overflow = savedContainerOverflow;
+          scrollContainer.style.position = savedContainerPosition;
+        }
         window.scrollTo(0, savedScrollY || 0);
       } catch (_) {}
     };
@@ -705,6 +718,12 @@ class ColorAnalyzer {
     pipetteBtn.addEventListener('click', onPipette);
     
     // Открываем модалку как центрированный фиксированный оверлей
+    // Убедимся, что модалка в body, иначе fixed может привязываться к родителю с transform
+    try {
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
+    } catch (_) {}
     modal.style.display = 'flex';
 
     // ==== HSV Picker implementation ====
