@@ -488,6 +488,14 @@ class ColorAnalyzer {
                       ('ontouchstart' in window) ||
                       (navigator.maxTouchPoints > 0);
       
+      console.log('Детекция платформы для элемента', idx, ':', {
+        isTelegram, 
+        isMobile, 
+        userAgent: navigator.userAgent,
+        telegramWebApp: !!window.Telegram?.WebApp,
+        telegramPlatform: window.Telegram?.WebApp?.platform
+      });
+      
       // Создаем кружок как div (всегда)
       const circle = document.createElement('div');
       circle.style.width = '24px';
@@ -518,37 +526,19 @@ class ColorAnalyzer {
       
       // События для изменения цвета
       if (isTelegram) {
-        // Для Telegram используем Telegram API или текстовый ввод
+        // Для Telegram используем палитру цветов
         circle.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          
-          // Используем Telegram showPopup для ввода цвета
-          if (window.Telegram?.WebApp?.showPopup) {
-            window.Telegram.WebApp.showPopup({
-              title: 'Выбор цвета',
-              message: 'Введите HEX код цвета (например: #ff0000):',
-              buttons: [
-                {id: 'cancel', type: 'cancel'},
-                {id: 'ok', type: 'ok'}
-              ]
-            }, (buttonId) => {
-              if (buttonId === 'ok') {
-                // К сожалению, showPopup не поддерживает ввод текста
-                // Используем prompt как fallback
-                this.showTelegramColorPicker(idx, color, circle, code);
-              }
-            });
-          } else {
-            // Fallback для старых версий Telegram
-            this.showTelegramColorPicker(idx, color, circle, code);
-          }
+          console.log('Telegram: клик по кружку, показываем палитру');
+          this.showTelegramColorPicker(idx, color, circle, code);
         });
       } else if (colorInput) {
         // Для десктопа используем стандартный color input
         circle.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
+          console.log('Десктоп: клик по кружку, открываем color picker');
           colorInput.click();
         });
         
@@ -562,6 +552,7 @@ class ColorAnalyzer {
         circle.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
+          console.log('Мобильный: клик по кружку, показываем палитру');
           this.showColorPalette((selectedColor) => {
             if (selectedColor) {
               circle.style.backgroundColor = selectedColor;
@@ -616,11 +607,17 @@ class ColorAnalyzer {
   
   // Показать модальное окно с палитрой цветов
   showColorPalette(callback) {
+    console.log('showColorPalette вызван');
     const modal = document.getElementById('colorPaletteModal');
     const grid = document.getElementById('colorPaletteGrid');
     const closeBtn = document.getElementById('closePaletteModal');
     
-    if (!modal || !grid || !closeBtn) return;
+    console.log('Элементы найдены:', {modal: !!modal, grid: !!grid, closeBtn: !!closeBtn});
+    
+    if (!modal || !grid || !closeBtn) {
+      console.error('Не найдены элементы модального окна');
+      return;
+    }
     
     // Очищаем сетку
     grid.innerHTML = '';
@@ -663,7 +660,9 @@ class ColorAnalyzer {
     });
     
     // Показываем модальное окно
+    console.log('Показываем модальное окно');
     modal.style.display = 'block';
+    console.log('Модальное окно показано, display:', modal.style.display);
     
     // Обработчик закрытия
     const closeModal = () => {
