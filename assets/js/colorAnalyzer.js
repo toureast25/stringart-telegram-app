@@ -93,8 +93,17 @@ class ColorAnalyzer {
     };
     
     // Обработчики для настроек фона
+    const bgColorDisplay = document.getElementById('bgColorDisplay');
+    bgColorDisplay?.addEventListener('click', () => {
+      this.elements.bgColorPicker?.click();
+    });
+    
     this.elements.bgColorPicker?.addEventListener('input', (e) => {
       this.setBackgroundColorAndUpdate(e.target.value);
+      // Обновляем отображение
+      if (bgColorDisplay) {
+        bgColorDisplay.style.background = e.target.value;
+      }
     });
     
     this.elements.bgEdgePercent?.addEventListener('input', debouncedBackgroundRecalc);
@@ -120,6 +129,15 @@ class ColorAnalyzer {
   
   setBackgroundColorAndUpdate(color) {
     this.app.setBackgroundColor(color);
+    
+    // Обновляем все элементы отображения цвета фона
+    const bgColorDisplay = document.getElementById('bgColorDisplay');
+    if (bgColorDisplay) {
+      bgColorDisplay.style.background = color;
+    }
+    if (this.elements.bgColorPicker) {
+      this.elements.bgColorPicker.value = color;
+    }
     
     // Реактивное обновление палитры и карт при изменении фона
     if (this.app.state.currentPalette.length > 0) {

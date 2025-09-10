@@ -87,7 +87,12 @@ class ActualColors {
 
   // Функция для отображения фактической палитры
   renderActualPalette() {
-    this.elements.actualPaletteDiv.innerHTML = '';
+    // Принудительное обновление для мобильных устройств
+    if (this.elements.actualPaletteDiv) {
+      this.elements.actualPaletteDiv.innerHTML = '';
+      // Принудительный reflow для мобильных браузеров
+      this.elements.actualPaletteDiv.offsetHeight;
+    }
     
     this.app.state.actualPalette.forEach((color, index) => {
       const item = document.createElement('div');
@@ -146,6 +151,29 @@ class ActualColors {
       item.appendChild(colorInput); // Добавляем скрытый input
       this.elements.actualPaletteDiv.appendChild(item);
     });
+    
+    // Принудительное обновление отображения для мобильных
+    if (this.elements.actualPaletteDiv) {
+      // Проверка на мобильное устройство
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                      window.Telegram?.WebApp?.platform;
+      
+      if (isMobile) {
+        // Более агрессивное обновление для мобильных
+        this.elements.actualPaletteDiv.style.display = 'none';
+        this.elements.actualPaletteDiv.offsetHeight; // Принудительный reflow
+        this.elements.actualPaletteDiv.style.display = '';
+        
+        // Дополнительное обновление через setTimeout
+        setTimeout(() => {
+          if (this.elements.actualPaletteDiv) {
+            this.elements.actualPaletteDiv.style.transform = 'translateZ(0)';
+            this.elements.actualPaletteDiv.offsetHeight;
+            this.elements.actualPaletteDiv.style.transform = '';
+          }
+        }, 50);
+      }
+    }
   }
   
   updateActualColor(index, color) {
