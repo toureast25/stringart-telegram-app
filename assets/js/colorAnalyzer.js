@@ -156,7 +156,8 @@ class ColorAnalyzer {
       this.generateColorMaps();
       
       // Обновляем сопоставление с фактической палитрой
-      if (this.app.actualColors && this.elements.syncWithCalculated && this.elements.syncWithCalculated.checked) {
+      const syncEl = document.getElementById('syncWithCalculated');
+      if (this.app.actualColors && syncEl && syncEl.checked) {
         this.app.actualColors.syncActualWithCalculated();
       }
     }
@@ -685,9 +686,11 @@ class ColorAnalyzer {
     this.generateColorMaps();
     
     // Обновляем сопоставление с фактической палитрой
-    if (this.app.actualColors && this.elements.syncWithCalculated && this.elements.syncWithCalculated.checked) {
+    const syncEl = document.getElementById('syncWithCalculated');
+    const autoEl = document.getElementById('autoMatchColors');
+    if (this.app.actualColors && syncEl && syncEl.checked) {
       this.app.actualColors.syncActualWithCalculated();
-    } else if (this.app.actualColors && this.elements.autoMatchColors && this.elements.autoMatchColors.checked) {
+    } else if (this.app.actualColors && autoEl && autoEl.checked) {
       this.app.actualColors.matchColors();
     }
   }
@@ -813,7 +816,8 @@ class ColorAnalyzer {
         this.generateColorMaps();
         
         // Обновляем сопоставление с фактической палитрой
-        if (this.app.actualColors && this.elements.syncWithCalculated && this.elements.syncWithCalculated.checked) {
+        const syncEl = document.getElementById('syncWithCalculated');
+        if (this.app.actualColors && syncEl && syncEl.checked) {
           this.app.actualColors.syncActualWithCalculated();
         }
       }
@@ -879,7 +883,7 @@ class ColorAnalyzer {
     document.getElementById('paletteSection').classList.remove('active');
     
     // Сброс значений
-    this.elements.clusteringMethod.value = 'tones';
+    this.elements.clusteringMethod.value = 'kmeans';
     this.elements.colorCount.value = '3';
     this.updateMethodInterface();
   }
