@@ -20,7 +20,8 @@ class ImageProcessor {
       resolutionInput: document.getElementById('resolutionInput'),
       percentDisplay: document.getElementById('percentDisplay'),
       blurRange: document.getElementById('blurRange'),
-      blurInput: document.getElementById('blurInput')
+      blurInput: document.getElementById('blurInput'),
+      testBlurBtn: document.getElementById('testBlurBtn')
     };
     
     this.bindEvents();
@@ -100,6 +101,11 @@ class ImageProcessor {
     
     this.elements.blurInput?.addEventListener('change', (e) => {
       updateBlur(e.target.value);
+    });
+    
+    // Обработчик для кнопки тестирования размытия
+    this.elements.testBlurBtn?.addEventListener('click', () => {
+      this.testBlurFunctionality();
     });
   }
   
@@ -258,6 +264,13 @@ class ImageProcessor {
       const blurValue = parseFloat(this.elements.blurInput.value) || 0;
       console.log('Applying blur:', blurValue, 'px'); // Отладочная информация
       
+      // Дополнительная информация для Telegram Mini App
+      if (window.Telegram?.WebApp) {
+        console.log('Running in Telegram Mini App');
+        console.log('Telegram WebApp version:', window.Telegram.WebApp.version);
+        console.log('User agent:', navigator.userAgent);
+      }
+      
       if (blurValue > 0) {
         // Проверяем поддержку filter в canvas
         const supportsFilter = 'filter' in ctx;
@@ -270,10 +283,19 @@ class ImageProcessor {
           console.log('Applied canvas filter:', filterValue); // Отладочная информация
           ctx.drawImage(img, 0, 0, this.snapshotCanvas.width, this.snapshotCanvas.height);
           ctx.filter = 'none'; // Сбрасываем фильтр
+          
+          // Дополнительная проверка для Telegram Mini App
+          if (window.Telegram?.WebApp) {
+            console.log('Canvas blur applied in Telegram Mini App');
+          }
         } else {
           // Fallback для старых браузеров - рисуем без размытия, но применим CSS
           ctx.drawImage(img, 0, 0, this.snapshotCanvas.width, this.snapshotCanvas.height);
           console.warn('Canvas filter not supported, using CSS fallback');
+          
+          if (window.Telegram?.WebApp) {
+            console.warn('Canvas filter not supported in Telegram Mini App, using CSS fallback');
+          }
         }
       } else {
         // Без размытия
@@ -298,6 +320,27 @@ class ImageProcessor {
         const cssFilter = `blur(${blurValue}px)`;
         this.elements.secondImg.style.filter = cssFilter;
         console.log('Applied CSS filter:', cssFilter); // Отладочная информация
+        
+        // Проверяем, применился ли CSS фильтр в Telegram
+        if (window.Telegram?.WebApp) {
+          setTimeout(() => {
+            const appliedFilter = getComputedStyle(this.elements.secondImg).filter;
+            console.log('Computed CSS filter in Telegram:', appliedFilter);
+            
+            if (appliedFilter === 'none' || !appliedFilter.includes('blur')) {
+              console.warn('CSS blur filter not applied in Telegram Mini App');
+              // Можно показать уведомление пользователю
+              if (this.app.telegramAPI) {
+                this.app.telegramAPI.hapticFeedback('error');
+              }
+            } else {
+              console.log('CSS blur successfully applied in Telegram Mini App');
+              if (this.app.telegramAPI) {
+                this.app.telegramAPI.hapticFeedback('light');
+              }
+            }
+          }, 100);
+        }
       } else {
         this.elements.secondImg.style.filter = 'none';
         console.log('Removed CSS filter'); // Отладочная информация
@@ -338,6 +381,41 @@ class ImageProcessor {
     const percent = bgEdgePercent ? parseInt(bgEdgePercent.value) || 10 : 10;
     const bgColor = Utils.getAverageEdgeColor(this.elements.previewImg, percent);
     this.app.setBackgroundColor(bgColor);
+  }
+  
+  testBlurFunctionality() {
+    if (!this.app.state.originalImage) {
+      const message = 'Сначала загрузите изображение для тестирования размытия';
+      if (this.app.telegramAPI) {
+        this.app.telegramAPI.showAlert(message);
+      } else {
+        alert(message);
+      }
+      return;
+    }
+    
+    console.log('=== ТЕСТ РАЗМЫТИЯ В TELEGRAM ===');
+    console.log('Telegram WebApp доступен:', !!window.Telegram?.WebApp);
+    console.log('User Agent:', navigator.userAgent);
+    
+    // Устанавливаем тестовое значение размытия
+    const testBlurValue = 5;
+    this.elements.blurRange.value = testBlurValue;
+    this.elements.blurInput.value = testBlurValue;
+    
+    // Применяем размытие
+    this.applyResolution();
+    
+    // Показываем уведомление
+    const message = `Тест размытия запущен! Проверьте консоль для отладочной информации. Размытие: ${testBlurValue}px`;
+    if (this.app.telegramAPI) {
+      this.app.telegramAPI.showAlert(message);
+      this.app.telegramAPI.hapticFeedback('medium');
+    } else {
+      alert(message);
+    }
+    
+    console.log('=== КОНЕЦ ТЕСТА ===');
   }
   
   reset() {
