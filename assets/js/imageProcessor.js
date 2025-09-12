@@ -269,7 +269,7 @@ class ImageProcessor {
       // Проверяем размер изображения для предотвращения проблем с памятью на мобильных
       // Кламп значения разрешения по заданным лимитам
       const MAX_ALLOWED = 300;
-      const MIN_ALLOWED = 50;
+      const MIN_ALLOWED = 100;
       let newWidth = parseInt(this.elements.resolutionInput.value);
       if (isNaN(newWidth)) newWidth = 200;
       newWidth = Math.max(MIN_ALLOWED, Math.min(MAX_ALLOWED, newWidth));
@@ -292,7 +292,12 @@ class ImageProcessor {
       this.snapshotCanvas.height = newHeight;
       
       // Применяем размытие
-      const blurValue = parseFloat(this.elements.blurInput.value) || 0;
+      let blurValue = parseFloat(this.elements.blurInput.value) || 0;
+      // Ограничиваем размытие до диапазона 0..1
+      if (blurValue < 0) blurValue = 0;
+      if (blurValue > 1) blurValue = 1;
+      this.elements.blurRange.value = blurValue;
+      this.elements.blurInput.value = blurValue;
       
       if (blurValue > 0) {
         // Проверяем поддержку filter в canvas
