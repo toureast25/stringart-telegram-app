@@ -21,7 +21,7 @@
   "display": "standalone",
   "orientation": "portrait",
   "scope": "./",
-  "start_url": "./",
+  "start_url": "./?v=20250910",
   "features": [
     "image_processing",
     "color_analysis", 

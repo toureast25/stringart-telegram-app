@@ -12,8 +12,8 @@
   <link rel="manifest" href="manifest.json">
   
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="assets/css/main.css">
-  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/main.css?v=20250910n">
+  <link rel="stylesheet" href="assets/css/components.css?v=20250910n">
   
   <!-- Meta tags for better SEO and sharing -->
   <meta name="description" content="Create StringArt templates from photos with advanced color analysis and k-means clustering">
@@ -24,7 +24,7 @@
   <meta property="og:title" content="StringArt Generator">
   <meta property="og:description" content="Create StringArt templates from photos">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="assets/images/i.webp">
+  <meta property="og:image" content="i.webp">
   
   <!-- Telegram Mini App meta -->
   <meta name="telegram:card" content="app">
@@ -35,8 +35,7 @@
 <div class="container" id="mainContainer">
 <div class="app">
   <header class="app-header">
-    <button id="uploadBtn" class="primary" type="button">Выбрать файл</button>
-    <button id="cameraBtn" type="button">Сделать фото</button>
+    <button id="addMediaBtn" class="primary" type="button">Добавить</button>
     <button id="testImageBtn" type="button">Тестовое изображение</button>
     <button id="resetBtn" type="button" style="display:none">Сброс</button>
   </header>
@@ -51,6 +50,18 @@
       <div id="preview" class="preview">
         <div class="preview-label">1) Исходное изображение</div>
         <img id="previewImg" alt="Предпросмотр"/>
+      </div>
+
+      <!-- Add Media Modal -->
+      <div id="addMediaModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1200;">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg);border-radius:12px;padding:16px;max-width:320px;width:90%;">
+          <div style="font-weight:bold;text-align:center;margin-bottom:12px;">Добавить изображение</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button id="addMediaFromCamera" type="button" style="padding:10px 12px;background:var(--accent);border:none;border-radius:8px;color:#081018;cursor:pointer;">Сделать фото</button>
+            <button id="addMediaFromFile" type="button" style="padding:10px 12px;background:var(--border);border:none;border-radius:8px;color:var(--text);cursor:pointer;">Выбрать из файла</button>
+            <button id="addMediaCancel" type="button" style="padding:10px 12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;">Отмена</button>
+          </div>
+        </div>
       </div>
 
       <!-- Step 2: Image Processing -->
@@ -91,10 +102,14 @@
             <div class="bg-color-preset" style="width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #fff;cursor:pointer;display:inline-block;margin-right:8px;" data-bg="#ffffff" title="Белый"></div>
             <div class="bg-color-preset" style="width:24px;height:24px;border-radius:50%;background:#000;border:2px solid #fff;cursor:pointer;display:inline-block;margin-right:8px;" data-bg="#000000" title="Чёрный"></div>
             <div class="bg-color-preset" style="width:24px;height:24px;border-radius:50%;background:#888;border:2px solid #fff;cursor:pointer;display:inline-block;margin-right:8px;" data-bg="#888888" title="Серый"></div>
-            <div id="bgColorDisplay" style="width:24px;height:24px;border-radius:50%;background:#ffffff;border:2px solid #fff;cursor:pointer;display:inline-block;"></div>
+            <div id="bgColorDisplay" style="width:24px;height:24px;border-radius:50%;background:#ffffff;border:2px solid transparent;cursor:pointer;display:inline-block;position:relative;">
+              <div style="position:absolute;inset:-3px;border-radius:50%;padding:2px;background:conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+                          -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+                          -webkit-mask-composite: xor; mask-composite: exclude;"></div>
+            </div>
             <input type="color" id="bgColorPicker" value="#ffffff" title="Выбрать цвет" style="display:none;">
             <button type="button" id="autoDetectBgBtn" class="pipette-btn" title="Автоматически определить цвет фона по краям изображения" style="margin-left:8px;">Авто</button>
-            <span id="currentBgColor" style="margin-left:10px;">#ffffff</span>
+            <span id="currentBgColor" style="margin-left:10px;user-select:text;">#ffffff</span>
           </div>
           <div style="margin-top:10px;">
             <label>Ширина полосы для автоопределения (%):
@@ -164,6 +179,42 @@
             <div id="colorPaletteGrid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:15px;"></div>
             <div style="text-align:center;">
               <button id="closePaletteModal" style="padding:8px 16px;background:var(--border);border:none;border-radius:6px;cursor:pointer;">Отмена</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Color Editor Modal (RGB + HEX + Pipette) -->
+        <div id="colorEditorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:11000;align-items:center;justify-content:center;">
+          <div style="background:var(--bg);border-radius:12px;padding:16px;max-width:360px;width:92%;color:var(--text);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div style="font-weight:bold;">Редактор цвета</div>
+              <div id="colorEditorPreview" style="width:28px;height:28px;border-radius:6px;border:2px solid #fff;background:#ffffff;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+              <label style="display:flex;align-items:center;gap:8px;">HEX
+                <input id="colorEditorHex" type="text" maxlength="7" placeholder="#ffffff" style="flex:1;padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);">
+              </label>
+              <button id="colorEditorPipette" type="button" style="padding:8px 12px;background:var(--accent);border:none;border-radius:6px;color:#081018;cursor:pointer;">Пипетка</button>
+            </div>
+            <!-- HSV Canvas Picker -->
+            <div style="display:flex;gap:10px;align-items:stretch;margin-bottom:12px;">
+              <canvas id="colorEditorSV" width="240" height="160" style="border-radius:8px; overflow:hidden; touch-action:none; background:#fff; flex:1; max-width:100%;"></canvas>
+              <canvas id="colorEditorHue" width="20" height="160" style="border-radius:8px; touch-action:none; background:#fff;"></canvas>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+              <label style="display:flex;flex-direction:column;gap:6px;">R
+                <input id="colorEditorR" type="number" min="0" max="255" value="255" style="padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;">G
+                <input id="colorEditorG" type="number" min="0" max="255" value="255" style="padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;">B
+                <input id="colorEditorB" type="number" min="0" max="255" value="255" style="padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);">
+              </label>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+              <button id="colorEditorCancel" type="button" style="padding:8px 12px;background:var(--border);border:none;border-radius:6px;color:var(--text);cursor:pointer;">Отмена</button>
+              <button id="colorEditorOk" type="button" style="padding:8px 12px;background:var(--accent);border:none;border-radius:6px;color:#081018;cursor:pointer;">Готово</button>
             </div>
           </div>
         </div>
@@ -257,13 +308,13 @@
 </div>
 
 <!-- JavaScript Modules -->
-<script src="assets/js/utils.js"></script>
-<script src="assets/js/telegramAPI.js"></script>
-<script src="assets/js/imageProcessor.js"></script>
-<script src="assets/js/colorAnalyzer.js"></script>
-<script src="assets/js/actualColors.js"></script>
-<script src="assets/js/stringartGenerator.js"></script>
-<script src="assets/js/app.js"></script>
+<script src="assets/js/utils.js?v=20250910"></script>
+<script src="assets/js/telegramAPI.js?v=20250910"></script>
+<script src="assets/js/imageProcessor.js?v=20250910"></script>
+<script src="assets/js/colorAnalyzer.js?v=20250910fixok"></script>
+<script src="assets/js/actualColors.js?v=20250910"></script>
+<script src="assets/js/stringartGenerator.js?v=20250910"></script>
+<script src="assets/js/app.js?v=20250910"></script>
 
 <!-- Pipette functionality -->
 <script>
@@ -282,8 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Клик по изображению в оверлее — выбор цвета
   pipetteImg?.addEventListener('click', (e) => {
     const idx = window.__activePipetteIndex;
-    if (typeof idx === 'undefined' || idx === null) return;
-    
     const rect = pipetteImg.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / rect.width * pipetteImg.naturalWidth);
     const y = Math.floor((e.clientY - rect.top) / rect.height * pipetteImg.naturalHeight);
@@ -298,14 +347,14 @@ document.addEventListener('DOMContentLoaded', () => {
       v.toString(16).padStart(2, '0')
     ).join('');
     
-    // Обновляем цвет в палитре
-    if (window.stringArtApp && window.stringArtApp.colorAnalyzer) {
+    // Если задан глобальный колбэк редактора, вызываем его
+    if (typeof window.__onPipettePick === 'function') {
+      try { window.__onPipettePick(hex); } catch (_) {}
+      window.__onPipettePick = null;
+    } else if (window.stringArtApp && window.stringArtApp.colorAnalyzer && typeof idx === 'number') {
+      // Fallback: обновляем расчётную палитру, если индекс задан
       window.stringArtApp.colorAnalyzer.updatePaletteColor(idx, hex);
-      
-      // Обновляем отображение палитры
       window.stringArtApp.colorAnalyzer.renderPalette();
-      
-      // Обновляем сопоставление с фактической палитрой
       if (window.stringArtApp.actualColors && 
           document.getElementById('syncWithCalculated') && 
           document.getElementById('syncWithCalculated').checked) {

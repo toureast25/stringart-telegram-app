@@ -95,7 +95,13 @@ class ColorAnalyzer {
     // Обработчики для настроек фона
     const bgColorDisplay = document.getElementById('bgColorDisplay');
     bgColorDisplay?.addEventListener('click', () => {
-      this.elements.bgColorPicker?.click();
+      // Открываем единый редактор цвета как в других разделах
+      const current = this.app.state.backgroundColor || '#ffffff';
+      this.openColorEditor(current, (selected) => {
+        if (selected) {
+          this.setBackgroundColorAndUpdate(selected);
+        }
+      });
     });
     
     this.elements.bgColorPicker?.addEventListener('input', (e) => {
@@ -156,7 +162,8 @@ class ColorAnalyzer {
       this.generateColorMaps();
       
       // Обновляем сопоставление с фактической палитрой
-      if (this.app.actualColors && this.elements.syncWithCalculated && this.elements.syncWithCalculated.checked) {
+      const syncEl = document.getElementById('syncWithCalculated');
+      if (this.app.actualColors && syncEl && syncEl.checked) {
         this.app.actualColors.syncActualWithCalculated();
       }
     }
@@ -524,44 +531,18 @@ class ColorAnalyzer {
       
       // Убираем дополнительные кнопки пипеток по просьбе пользователя
       
-      // События для изменения цвета
-      if (isTelegram) {
-        // Для Telegram используем палитру цветов
-        circle.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Telegram: клик по кружку, показываем палитру');
-          this.showTelegramColorPicker(idx, color, circle, code);
+      // События для изменения цвета — открываем единый RGB-редактор
+      circle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openColorEditor(color, (selectedColor) => {
+          if (selectedColor) {
+            circle.style.backgroundColor = selectedColor;
+            code.value = selectedColor;
+            this.updatePaletteColor(idx, selectedColor);
+          }
         });
-      } else if (colorInput) {
-        // Для десктопа используем стандартный color input
-        circle.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Десктоп: клик по кружку, открываем color picker');
-          colorInput.click();
-        });
-        
-        colorInput.addEventListener('input', () => {
-          circle.style.backgroundColor = colorInput.value;
-          code.value = colorInput.value;
-          this.updatePaletteColor(idx, colorInput.value);
-        });
-      } else {
-        // Для мобильных (не Telegram) используем палитру цветов
-        circle.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Мобильный: клик по кружку, показываем палитру');
-          this.showColorPalette((selectedColor) => {
-            if (selectedColor) {
-              circle.style.backgroundColor = selectedColor;
-              code.value = selectedColor;
-              this.updatePaletteColor(idx, selectedColor);
-            }
-          });
-        });
-      }
+      });
       
       // Общий обработчик для текстового поля
       code.addEventListener('input', () => {
@@ -589,6 +570,305 @@ class ColorAnalyzer {
     });
   }
   
+  // Единый редактор цвета (HEX/RGB + пипетка)
+  openColorEditor(currentColor, onApply) {
+    const modal = document.getElementById('colorEditorModal');
+    const hexInput = document.getElementById('colorEditorHex');
+    const rInput = document.getElementById('colorEditorR');
+    const gInput = document.getElementById('colorEditorG');
+    const bInput = document.getElementById('colorEditorB');
+    const okBtn = document.getElementById('colorEditorOk');
+    const cancelBtn = document.getElementById('colorEditorCancel');
+    const pipetteBtn = document.getElementById('colorEditorPipette');
+    const preview = document.getElementById('colorEditorPreview');
+    const svCanvas = document.getElementById('colorEditorSV');
+    const hueCanvas = document.getElementById('colorEditorHue');
+    
+    if (!modal || !hexInput || !rInput || !gInput || !bInput || !okBtn || !cancelBtn || !pipetteBtn || !preview || !svCanvas || !hueCanvas) {
+      // Fallback — если по какой-то причине нет редактора, используем палитру
+      return this.showColorPalette(onApply);
+    }
+    
+    let currentHue = 0, currentS = 0, currentV = 1;
+
+    const setFromHex = (hex) => {
+      if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return;
+      const [r, g, b] = Utils.hexToRgb(hex);
+      hexInput.value = hex.toLowerCase();
+      rInput.value = r;
+      gInput.value = g;
+      bInput.value = b;
+      preview.style.background = hex;
+      currentHex = hex.toLowerCase();
+      // Обновляем HSV значения без перерисовки (инициализируем позже)
+      const hsv = rgbToHsv ? rgbToHsv(r, g, b) : [0, 0, 1];
+      currentHue = hsv[0];
+      currentS = hsv[1];
+      currentV = hsv[2];
+    };
+    
+    const clamp255 = (n) => Math.max(0, Math.min(255, parseInt(n || 0)));
+    const setFromRgb = () => {
+      const r = clamp255(rInput.value);
+      const g = clamp255(gInput.value);
+      const b = clamp255(bInput.value);
+      const hex = Utils.rgbToHex(r, g, b);
+      hexInput.value = hex;
+      preview.style.background = hex;
+      currentHex = hex;
+      const hsv = rgbToHsv(r, g, b);
+      currentHue = hsv[0];
+      currentS = hsv[1];
+      currentV = hsv[2];
+      if (typeof drawHue === 'function') drawHue();
+      if (typeof drawSV === 'function') drawSV();
+    };
+    
+    let currentHex = currentColor && /^#[0-9A-Fa-f]{6}$/.test(currentColor) ? currentColor : '#ffffff';
+    setFromHex(currentHex);
+    
+    const onHexInput = () => setFromHex(hexInput.value.trim());
+    const onR = () => setFromRgb();
+    const onG = () => setFromRgb();
+    const onB = () => setFromRgb();
+    const normalizeHex = (hex) => {
+      if (typeof hex !== 'string') return null;
+      let v = hex.trim().toLowerCase();
+      if (!v.startsWith('#')) v = '#' + v;
+      if (/^#[0-9a-f]{6}$/.test(v)) return v;
+      return null;
+    };
+    const onOk = () => {
+      // Берём актуальное значение из HEX поля, иначе собираем из RGB
+      let finalHex = normalizeHex(hexInput.value) || Utils.rgbToHex(
+        Math.max(0, Math.min(255, parseInt(rInput.value || 0))),
+        Math.max(0, Math.min(255, parseInt(gInput.value || 0))),
+        Math.max(0, Math.min(255, parseInt(bInput.value || 0)))
+      );
+      if (onApply) onApply(finalHex);
+      close();
+    };
+    const onCancel = () => close();
+    const onPipette = () => {
+      const secondImg = document.getElementById('secondImg');
+      const overlay = document.getElementById('pipetteOverlay');
+      const pipetteImg = document.getElementById('pipetteImg');
+      if (!secondImg || !secondImg.src) {
+        if (this.app.telegramAPI) this.app.telegramAPI.showAlert('Сначала подготовьте изображение во втором шаге');
+        else alert('Сначала подготовьте изображение во втором шаге');
+        return;
+      }
+      window.__onPipettePick = (hex) => {
+        try { setFromHex(hex); } catch (_) {}
+      };
+      pipetteImg.src = secondImg.src;
+      overlay.style.display = 'flex';
+    };
+    
+    // Scroll lock helpers
+    let savedScrollY = 0;
+    let savedOverflow = '';
+    let savedPosition = '';
+    let savedTop = '';
+    let savedWidth = '';
+    const preventTouchScroll = (e) => { e.preventDefault(); };
+    const scrollContainer = document.querySelector('.container');
+    let savedContainerOverflow = '';
+    let savedContainerPosition = '';
+
+    const lockScroll = () => {
+      try {
+        savedScrollY = window.scrollY || window.pageYOffset || 0;
+        savedOverflow = document.body.style.overflow;
+        savedPosition = document.body.style.position;
+        savedTop = document.body.style.top;
+        savedWidth = document.body.style.width;
+        document.documentElement.classList.add('modal-open');
+        document.body.classList.add('modal-open');
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${savedScrollY}px`;
+        document.body.style.width = '100%';
+        modal.addEventListener('touchmove', preventTouchScroll, { passive: false });
+        if (scrollContainer) {
+          savedContainerOverflow = scrollContainer.style.overflow;
+          savedContainerPosition = scrollContainer.style.position;
+          scrollContainer.style.overflow = 'hidden';
+          scrollContainer.style.position = 'relative';
+        }
+      } catch (_) {}
+    };
+
+    const unlockScroll = () => {
+      try {
+        modal.removeEventListener('touchmove', preventTouchScroll);
+        document.documentElement.classList.remove('modal-open');
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = savedOverflow;
+        document.body.style.position = savedPosition;
+        document.body.style.top = savedTop;
+        document.body.style.width = savedWidth;
+        if (scrollContainer) {
+          scrollContainer.style.overflow = savedContainerOverflow;
+          scrollContainer.style.position = savedContainerPosition;
+        }
+        window.scrollTo(0, savedScrollY || 0);
+      } catch (_) {}
+    };
+
+    const close = () => {
+      modal.style.display = 'none';
+      unlockScroll();
+      hexInput.removeEventListener('input', onHexInput);
+      rInput.removeEventListener('input', onR);
+      gInput.removeEventListener('input', onG);
+      bInput.removeEventListener('input', onB);
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      pipetteBtn.removeEventListener('click', onPipette);
+      modal.removeEventListener('click', onBackdropClick);
+    };
+    
+    hexInput.addEventListener('input', onHexInput);
+    rInput.addEventListener('input', onR);
+    gInput.addEventListener('input', onG);
+    bInput.addEventListener('input', onB);
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    pipetteBtn.addEventListener('click', onPipette);
+    
+    // Открываем модалку как центрированный фиксированный оверлей
+    // Убедимся, что модалка в body, иначе fixed может привязываться к родителю с transform
+    try {
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
+    } catch (_) {}
+    modal.style.display = 'flex';
+
+    // ==== HSV Picker implementation ====
+    const svCtx = svCanvas.getContext('2d');
+    const hueCtx = hueCanvas.getContext('2d');
+    function hsvToRgb(h, s, v) {
+      let c = v * s;
+      let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+      let m = v - c;
+      let r1 = 0, g1 = 0, b1 = 0;
+      if (h < 60) { r1 = c; g1 = x; }
+      else if (h < 120) { r1 = x; g1 = c; }
+      else if (h < 180) { g1 = c; b1 = x; }
+      else if (h < 240) { g1 = x; b1 = c; }
+      else if (h < 300) { r1 = x; b1 = c; }
+      else { r1 = c; b1 = x; }
+      return [Math.round((r1 + m) * 255), Math.round((g1 + m) * 255), Math.round((b1 + m) * 255)];
+    }
+    function rgbToHsv(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      const d = max - min;
+      let h = 0;
+      if (d === 0) h = 0;
+      else if (max === r) h = 60 * (((g - b) / d) % 6);
+      else if (max === g) h = 60 * (((b - r) / d) + 2);
+      else h = 60 * (((r - g) / d) + 4);
+      if (h < 0) h += 360;
+      const s = max === 0 ? 0 : d / max;
+      const v = max;
+      return [h, s, v];
+    }
+    function drawHue() {
+      const w = hueCanvas.width, h = hueCanvas.height;
+      const gradient = hueCtx.createLinearGradient(0, 0, 0, h);
+      gradient.addColorStop(0, '#ff0000');
+      gradient.addColorStop(1/6, '#ffff00');
+      gradient.addColorStop(2/6, '#00ff00');
+      gradient.addColorStop(3/6, '#00ffff');
+      gradient.addColorStop(4/6, '#0000ff');
+      gradient.addColorStop(5/6, '#ff00ff');
+      gradient.addColorStop(1, '#ff0000');
+      hueCtx.fillStyle = gradient;
+      hueCtx.fillRect(0, 0, w, h);
+      hueCtx.strokeStyle = '#fff';
+      hueCtx.lineWidth = 2;
+      const y = (currentHue / 360) * h;
+      hueCtx.beginPath();
+      hueCtx.rect(0.5, y - 2, w - 1, 4);
+      hueCtx.stroke();
+    }
+    function drawSV() {
+      const w = svCanvas.width, h = svCanvas.height;
+      const base = hsvToRgb(currentHue, 1, 1);
+      const gradX = svCtx.createLinearGradient(0, 0, w, 0);
+      gradX.addColorStop(0, 'rgba(255,255,255,1)');
+      gradX.addColorStop(1, `rgb(${base[0]},${base[1]},${base[2]})`);
+      svCtx.fillStyle = gradX;
+      svCtx.fillRect(0, 0, w, h);
+      const gradY = svCtx.createLinearGradient(0, 0, 0, h);
+      gradY.addColorStop(0, 'rgba(0,0,0,0)');
+      gradY.addColorStop(1, 'rgba(0,0,0,1)');
+      svCtx.fillStyle = gradY;
+      svCtx.fillRect(0, 0, w, h);
+      const x = currentS * w;
+      const y = (1 - currentV) * h;
+      svCtx.strokeStyle = '#fff';
+      svCtx.lineWidth = 2;
+      svCtx.beginPath();
+      svCtx.arc(x, y, 6, 0, Math.PI * 2);
+      svCtx.stroke();
+    }
+    function applyFromHSV() {
+      const rgb = hsvToRgb(currentHue, currentS, currentV);
+      const hex = Utils.rgbToHex(rgb[0], rgb[1], rgb[2]);
+      currentHex = hex;
+      hexInput.value = hex;
+      rInput.value = rgb[0]; gInput.value = rgb[1]; bInput.value = rgb[2];
+      preview.style.background = hex;
+    }
+    function updateFromSV(clientX, clientY) {
+      const rect = svCanvas.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+      currentS = x / rect.width;
+      currentV = 1 - (y / rect.height);
+      applyFromHSV();
+      drawSV();
+    }
+    function updateFromHue(clientY) {
+      const rect = hueCanvas.getBoundingClientRect();
+      const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+      currentHue = (y / rect.height) * 360;
+      applyFromHSV();
+      drawHue();
+      drawSV();
+    }
+    const svPointer = (e) => {
+      const pt = e.touches ? e.touches[0] : e;
+      updateFromSV(pt.clientX, pt.clientY);
+      e.preventDefault();
+    };
+    const huePointer = (e) => {
+      const pt = e.touches ? e.touches[0] : e;
+      updateFromHue(pt.clientY);
+      e.preventDefault();
+    };
+    const addDrag = (el, handler) => {
+      let active = false;
+      const onDown = (e) => { active = true; handler(e); };
+      const onMove = (e) => { if (!active) return; handler(e); };
+      const onUp = () => { active = false; };
+      el.addEventListener('mousedown', onDown);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      el.addEventListener('touchstart', onDown, { passive: false });
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onUp);
+    };
+    drawHue();
+    drawSV();
+    addDrag(svCanvas, svPointer);
+    addDrag(hueCanvas, huePointer);
+  }
+
   // Метод для выбора цвета через палитру
   showTelegramColorPicker(idx, currentColor, circle, code) {
     this.showColorPalette((selectedColor) => {
@@ -661,7 +941,11 @@ class ColorAnalyzer {
     
     // Показываем модальное окно
     console.log('Показываем модальное окно');
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
+    // Центрируем и блокируем прокрутку страницы, затемняем весь UI
+    lockScroll();
+    const onBackdropClick = (e) => { if (e.target === modal) close(); };
+    modal.addEventListener('click', onBackdropClick);
     console.log('Модальное окно показано, display:', modal.style.display);
     
     // Обработчик закрытия
@@ -685,9 +969,11 @@ class ColorAnalyzer {
     this.generateColorMaps();
     
     // Обновляем сопоставление с фактической палитрой
-    if (this.app.actualColors && this.elements.syncWithCalculated && this.elements.syncWithCalculated.checked) {
+    const syncEl = document.getElementById('syncWithCalculated');
+    const autoEl = document.getElementById('autoMatchColors');
+    if (this.app.actualColors && syncEl && syncEl.checked) {
       this.app.actualColors.syncActualWithCalculated();
-    } else if (this.app.actualColors && this.elements.autoMatchColors && this.elements.autoMatchColors.checked) {
+    } else if (this.app.actualColors && autoEl && autoEl.checked) {
       this.app.actualColors.matchColors();
     }
   }
@@ -813,7 +1099,8 @@ class ColorAnalyzer {
         this.generateColorMaps();
         
         // Обновляем сопоставление с фактической палитрой
-        if (this.app.actualColors && this.elements.syncWithCalculated && this.elements.syncWithCalculated.checked) {
+        const syncEl = document.getElementById('syncWithCalculated');
+        if (this.app.actualColors && syncEl && syncEl.checked) {
           this.app.actualColors.syncActualWithCalculated();
         }
       }
@@ -879,7 +1166,7 @@ class ColorAnalyzer {
     document.getElementById('paletteSection').classList.remove('active');
     
     // Сброс значений
-    this.elements.clusteringMethod.value = 'tones';
+    this.elements.clusteringMethod.value = 'kmeans';
     this.elements.colorCount.value = '3';
     this.updateMethodInterface();
   }
@@ -899,9 +1186,15 @@ class ColorAnalyzer {
   }
   
   updateBackgroundDisplay(color) {
+    // Обновляем текст HEX без заливки фоном
     if (this.elements.currentBgColor) {
       this.elements.currentBgColor.textContent = color;
-      this.elements.currentBgColor.style.background = color;
+      this.elements.currentBgColor.style.background = '';
+    }
+    // Обновляем цвет в кастомном кружке
+    const bgColorDisplay = document.getElementById('bgColorDisplay');
+    if (bgColorDisplay) {
+      bgColorDisplay.style.background = color;
     }
     
     if (this.elements.bgColorPicker) {

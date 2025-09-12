@@ -31,6 +31,12 @@
   box-sizing: border-box;
 }
 
+/* Prevent horizontal overflow on core containers */
+.preview, .second-preview, .palette, .maps-container {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 .second-preview {
   display: none;
   border-top: 1px solid var(--border);
@@ -137,6 +143,7 @@
   padding: 0 16px;
   box-sizing: border-box;
   justify-content: center;
+  width: 100%;
 }
 
 .color-item {
@@ -244,6 +251,8 @@ input[type="color"][style*="display: none"] {
   padding: 0 16px;
   box-sizing: border-box;
   justify-content: center;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* Адаптивные контейнеры масок */
@@ -529,8 +538,9 @@ button:active, .pipette-btn:active {
   }
   
   /* Исправляем кнопки на мобильном - добавляем отступы от краев */
-  header.app-header button {
-    margin: 0 8px 8px 0;
+  header.app-header {
+    gap: clamp(2px, 1vw, 6px);
+    padding: clamp(4px, 1.5vw, 8px);
   }
   
   /* Уменьшаем сложность анимаций на слабых устройствах */
