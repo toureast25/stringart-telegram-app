@@ -1,3 +1,5 @@
+---
+---
 <!doctype html>
 <html lang="ru">
 <head>
@@ -11,9 +13,9 @@
   <!-- Manifest for PWA support -->
   <link rel="manifest" href="manifest.json">
   
-  <!-- Stylesheets -->
-  <link rel="stylesheet" href="assets/css/main.css?v=20250910n">
-  <link rel="stylesheet" href="assets/css/components.css?v=20250910n">
+  <!-- Stylesheets (cache-busted on each deploy) -->
+  <link rel="stylesheet" href="assets/css/main.css?v={{ site.github.build_revision }}">
+  <link rel="stylesheet" href="assets/css/components.css?v={{ site.github.build_revision }}">
   
   <!-- Meta tags for better SEO and sharing -->
   <meta name="description" content="Create StringArt templates from photos with advanced color analysis and k-means clustering">
@@ -24,7 +26,7 @@
   <meta property="og:title" content="StringArt Generator">
   <meta property="og:description" content="Create StringArt templates from photos">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="i.webp">
+  <meta property="og:image" content="i.webp?v={{ site.github.build_revision }}">
   
   <!-- Telegram Mini App meta -->
   <meta name="telegram:card" content="app">
@@ -308,13 +310,13 @@
 </div>
 
 <!-- JavaScript Modules -->
-<script src="assets/js/utils.js?v=20250910"></script>
-<script src="assets/js/telegramAPI.js?v=20250910"></script>
-<script src="assets/js/imageProcessor.js?v=20250910"></script>
-<script src="assets/js/colorAnalyzer.js?v=20250910fixok"></script>
-<script src="assets/js/actualColors.js?v=20250910"></script>
-<script src="assets/js/stringartGenerator.js?v=20250910"></script>
-<script src="assets/js/app.js?v=20250910"></script>
+<script src="assets/js/utils.js?v={{ site.github.build_revision }}"></script>
+<script src="assets/js/telegramAPI.js?v={{ site.github.build_revision }}"></script>
+<script src="assets/js/imageProcessor.js?v={{ site.github.build_revision }}"></script>
+<script src="assets/js/colorAnalyzer.js?v={{ site.github.build_revision }}"></script>
+<script src="assets/js/actualColors.js?v={{ site.github.build_revision }}"></script>
+<script src="assets/js/stringartGenerator.js?v={{ site.github.build_revision }}"></script>
+<script src="assets/js/app.js?v={{ site.github.build_revision }}"></script>
 
 <!-- Pipette functionality -->
 <script>
