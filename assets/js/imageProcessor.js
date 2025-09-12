@@ -235,24 +235,19 @@ class ImageProcessor {
   }
   
   setupControls(width) {
-    // Ограничиваем максимальное разрешение для мобильных устройств
-    let maxWidth = width;
-    if (this.isMobileDevice()) {
-      // На мобильных ограничиваем до 400px для максимальной стабильности
-      maxWidth = Math.min(width, 400);
-      console.log('Mobile device detected, limiting max resolution to', maxWidth);
-      
-      // Дополнительно ограничиваем для Telegram
-      if (this.isTelegramWebApp()) {
-        maxWidth = Math.min(maxWidth, 350);
-        console.log('Telegram WebApp detected, further limiting to', maxWidth);
-      }
-    }
+    // Жёсткие лимиты и дефолты для параметра Разрешение
+    const MAX_ALLOWED = 300;
+    const DEFAULT_WIDTH = 200;
     
-    this.elements.resolutionRange.max = maxWidth;
-    this.elements.resolutionInput.max = maxWidth;
-    this.elements.resolutionRange.value = Math.min(width * 0.2, maxWidth);
-    this.elements.resolutionInput.value = Math.min(width * 0.2, maxWidth);
+    // Предельное значение — 300px вне зависимости от устройства/Telegram
+    const maxWidth = Math.min(width, MAX_ALLOWED);
+    
+    this.elements.resolutionRange.max = MAX_ALLOWED;
+    this.elements.resolutionInput.max = MAX_ALLOWED;
+    
+    const initial = Math.min(DEFAULT_WIDTH, maxWidth);
+    this.elements.resolutionRange.value = initial;
+    this.elements.resolutionInput.value = initial;
     this.updatePercent();
     
     // Показываем объединённую кнопку добавления медиа
@@ -272,7 +267,14 @@ class ImageProcessor {
     const img = new Image();
     img.onload = () => {
       // Проверяем размер изображения для предотвращения проблем с памятью на мобильных
-      const newWidth = parseInt(this.elements.resolutionInput.value);
+      // Кламп значения разрешения по заданным лимитам
+      const MAX_ALLOWED = 300;
+      const MIN_ALLOWED = 50;
+      let newWidth = parseInt(this.elements.resolutionInput.value);
+      if (isNaN(newWidth)) newWidth = 200;
+      newWidth = Math.max(MIN_ALLOWED, Math.min(MAX_ALLOWED, newWidth));
+      this.elements.resolutionRange.value = newWidth;
+      this.elements.resolutionInput.value = newWidth;
       const newHeight = this.app.state.originalHeight * (newWidth / this.app.state.originalWidth);
       const imageSize = newWidth * newHeight;
       
