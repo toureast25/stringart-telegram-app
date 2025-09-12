@@ -330,10 +330,12 @@ class ImageProcessor {
         this.elements.secondPreview.classList.add('active');
         document.getElementById('paletteSection').classList.add('active');
         
-        // Запускаем анализ цветов
-        this.app.colorAnalyzer?.extractPalette();
+        // Запускаем анализ цветов (latest-wins)
+        this.app.colorAnalyzer?.requestExtractPalette();
       };
       
+      // Отменяем текущий анализ перед сменой изображения, чтобы старый результат не применился
+      this.app.colorAnalyzer?.cancelCurrentJob?.();
       this.elements.secondImg.src = newDataURL;
       this.elements.secondImg.style.width = '100%';
       
@@ -359,34 +361,7 @@ class ImageProcessor {
       // Размытие должно быть только в Canvas, а изображение показываем без CSS фильтров
       this.elements.secondImg.style.filter = 'none';
       
-      // ВАЖНО: Принудительно пересчитываем палитру, даже если onload не сработает
-      // Это нужно для случаев, когда изображение уже загружено и onload не вызывается
-      setTimeout(() => {
-        if (this.app.colorAnalyzer) {
-          this.app.colorAnalyzer.extractPalette();
-        }
-      }, 12);
-      
-      // Дополнительная попытка через больший интервал для мобильных устройств
-      setTimeout(() => {
-        if (this.app.colorAnalyzer && this.elements.secondImg.complete) {
-          this.app.colorAnalyzer.extractPalette();
-        }
-      }, 36);
-      
-      // Специальная обработка для Telegram WebApp - еще более агрессивный пересчет
-      if (this.isTelegramWebApp()) {
-        setTimeout(() => {
-          if (this.app.colorAnalyzer) {
-            this.app.colorAnalyzer.extractPalette();
-            
-            // Принудительно обновляем маски
-            if (this.app.actualColors) {
-              this.app.actualColors.update();
-            }
-          }
-        }, 61);
-      }
+      // Убираем дублирующие пересчёты: один запускается через onload
     };
     img.src = this.app.state.originalImage;
   }

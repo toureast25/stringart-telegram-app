@@ -6,6 +6,9 @@
 class ColorAnalyzer {
   constructor(app) {
     this.app = app;
+    // Контроль конкурирующих пересчётов
+    this.currentJobId = 0;
+    this.lastAnalysisKey = null;
     
     // Кеш для оптимизации производительности
     this.cache = {
@@ -41,6 +44,20 @@ class ColorAnalyzer {
     this.bindEvents();
   }
   
+  // Запрос пересчёта с отменой предыдущего (latest-wins)
+  requestExtractPalette() {
+    const jobId = ++this.currentJobId;
+    // Не увеличиваем задержки UI — запускаем в ближайший кадр
+    requestAnimationFrame(() => this.extractPalette(jobId));
+  }
+  
+  // Кооперативная отмена текущего пересчёта
+  cancelCurrentJob() {
+    this.currentJobId++;
+    this.hidePaletteLoading();
+    this.hideMasksLoading();
+  }
+  
   bindEvents() {
     // Debouncing для тяжелых операций с requestAnimationFrame
     let paletteTimeout;
@@ -66,7 +83,7 @@ class ColorAnalyzer {
     // Обработчики для метода кластеризации
     this.elements.clusteringMethod?.addEventListener('change', () => {
       this.updateMethodInterface();
-      this.extractPalette(); // Без debouncing для dropdown
+      this.requestExtractPalette(); // Без debouncing для dropdown
     });
     
     // Обработчики для количества цветов
@@ -74,7 +91,7 @@ class ColorAnalyzer {
       if (this.elements.clusteringMethod.value === 'tones') {
         this.updateTonesProportions();
       }
-      this.extractPalette(); // Без debouncing для dropdown
+      this.requestExtractPalette(); // Без debouncing для dropdown
     });
     
     // Обработчики для метода по тонам с debouncing
@@ -202,7 +219,7 @@ class ColorAnalyzer {
     if (total > currentTotal) {
       this.elements.colorCount.value = total;
     }
-    this.extractPalette();
+    this.requestExtractPalette();
   }
   
   // Методы для управления индикаторами загрузки
@@ -230,7 +247,7 @@ class ColorAnalyzer {
     }
   }
 
-  extractPalette() {
+  extractPalette(jobId) {
     // Показываем индикатор загрузки
     this.showPaletteLoading();
     
@@ -242,15 +259,32 @@ class ColorAnalyzer {
     
     // Проверяем, что изображение загружено
     if (!secondImg.complete || !secondImg.naturalWidth) {
-      setTimeout(() => this.extractPalette(), 50);
+      setTimeout(() => this.extractPalette(jobId), 50);
       return;
     }
     
     // Дополнительная проверка для мобильных устройств
     if (this.isMobileDevice() && secondImg.naturalWidth === 0) {
-      setTimeout(() => this.extractPalette(), 100);
+      setTimeout(() => this.extractPalette(jobId), 100);
       return;
     }
+    // Отмена: если пришёл новый job — прекращаем
+    if (jobId !== this.currentJobId) { this.hidePaletteLoading(); return; }
+
+    // Проверка «значимого входа», чтобы не пересчитывать лишний раз
+    const method = this.elements.clusteringMethod.value;
+    const colorCount = this.elements.colorCount?.value || '';
+    const bg = this.app.state.backgroundColor || '';
+    const tones = [this.elements.darkCount?.value, this.elements.midCount?.value, this.elements.lightCount?.value].join(',');
+    const minDE = this.elements.minDeltaEInput?.value || '';
+    const analysisKey = `${secondImg.src}|${method}|${colorCount}|${bg}|${tones}|${minDE}`;
+    if (this.lastAnalysisKey === analysisKey) {
+      this.hidePaletteLoading();
+      // Но всё равно можем сгенерировать маски из кеша/палитры, если нужно
+      this.generateColorMaps();
+      return;
+    }
+    this.lastAnalysisKey = analysisKey;
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -294,6 +328,8 @@ class ColorAnalyzer {
       step = 4 * 6; // Десктоп
     }
     
+    // Отмена перед тяжёлым циклом
+    if (jobId !== this.currentJobId) { this.hidePaletteLoading(); return; }
     for (let i = 0; i < data.length; i += step) {
       sampleColors.push([data[i], data[i + 1], data[i + 2]]);
     }
@@ -307,6 +343,8 @@ class ColorAnalyzer {
     
     console.log(`Image size: ${imageSize}, samples: ${sampleColors.length}, step: ${step}`);
     
+    // Отмена перед кластеризацией
+    if (jobId !== this.currentJobId) { this.hidePaletteLoading(); return; }
     const method = this.elements.clusteringMethod.value;
     let resultColors = [];
     
@@ -324,6 +362,9 @@ class ColorAnalyzer {
     // Добавляем цвет фона в начало палитры
     palette.unshift(this.app.state.backgroundColor);
     
+    // Отмена перед применением результата
+    if (jobId !== this.currentJobId) { this.hidePaletteLoading(); return; }
+
     // Обновляем состояние приложения
     this.app.setPalette(palette);
     
