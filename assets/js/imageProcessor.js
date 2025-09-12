@@ -9,7 +9,6 @@ class ImageProcessor {
     this.fileInput = this.createFileInput();
     this.cameraStream = null;
     this.snapshotCanvas = document.getElementById('snapshotCanvas');
-    this._blurTimeout = null;
     
     this.elements = {
       preview: document.getElementById('preview'),
@@ -44,68 +43,70 @@ class ImageProcessor {
   }
   
   bindEvents() {
-    // Публичные методы используются и в app.js, и в локальных обработчиках
+    // Функция для обновления разрешения
+    const updateResolution = (value) => {
+      this.elements.resolutionInput.value = value;
+      this.elements.resolutionRange.value = value;
+      this.updatePercent();
+      this.applyResolution();
+    };
+    
+    // Функция для обновления размытия с debouncing
+    let blurTimeout;
+    const updateBlur = (value) => {
+      const blurValue = parseFloat(value) || 0;
+      this.elements.blurInput.value = blurValue;
+      this.elements.blurRange.value = blurValue;
+      
+      // Debouncing для плавности работы
+      clearTimeout(blurTimeout);
+      blurTimeout = setTimeout(() => {
+        this.applyResolution();
+      }, 12); // Задержка 12ms
+    };
     
     // Обработчики для настроек разрешения - добавляем множественные события для мобильных
     this.elements.resolutionRange?.addEventListener('input', (e) => {
-      this.updateResolution(e.target.value);
+      updateResolution(e.target.value);
     });
     
     this.elements.resolutionRange?.addEventListener('change', (e) => {
-      this.updateResolution(e.target.value);
+      updateResolution(e.target.value);
     });
     
     this.elements.resolutionRange?.addEventListener('touchend', (e) => {
-      this.updateResolution(e.target.value);
+      updateResolution(e.target.value);
     });
     
     this.elements.resolutionInput?.addEventListener('input', (e) => {
-      this.updateResolution(e.target.value);
+      updateResolution(e.target.value);
     });
     
     this.elements.resolutionInput?.addEventListener('change', (e) => {
-      this.updateResolution(e.target.value);
+      updateResolution(e.target.value);
     });
     
     // Обработчики для размытия - добавляем множественные события для мобильных
     this.elements.blurRange?.addEventListener('input', (e) => {
-      this.updateBlur(e.target.value);
+      updateBlur(e.target.value);
     });
     
     this.elements.blurRange?.addEventListener('change', (e) => {
-      this.updateBlur(e.target.value);
+      updateBlur(e.target.value);
     });
     
     this.elements.blurRange?.addEventListener('touchend', (e) => {
-      this.updateBlur(e.target.value);
+      updateBlur(e.target.value);
     });
     
     this.elements.blurInput?.addEventListener('input', (e) => {
-      this.updateBlur(e.target.value);
+      updateBlur(e.target.value);
     });
     
     this.elements.blurInput?.addEventListener('change', (e) => {
-      this.updateBlur(e.target.value);
+      updateBlur(e.target.value);
     });
     
-  }
-
-  // Публичные методы для синхронизации с app.js
-  updateResolution(value) {
-    this.elements.resolutionInput.value = value;
-    this.elements.resolutionRange.value = value;
-    this.updatePercent();
-    this.applyResolution();
-  }
-
-  updateBlur(value) {
-    const blurValue = parseFloat(value) || 0;
-    this.elements.blurInput.value = blurValue;
-    this.elements.blurRange.value = blurValue;
-    clearTimeout(this._blurTimeout);
-    this._blurTimeout = setTimeout(() => {
-      this.applyResolution();
-    }, 12);
   }
   
   openFileDialog() {
