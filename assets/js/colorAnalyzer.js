@@ -64,10 +64,8 @@ class ColorAnalyzer {
     const debouncedExtractPalette = () => {
       clearTimeout(paletteTimeout);
       paletteTimeout = setTimeout(() => {
-        requestAnimationFrame(() => {
-          this.extractPalette();
-        });
-      }, 36); // 36ms задержка для тяжелых операций
+        this.requestExtractPalette();
+      }, 36); // 36ms задержка для тяжелых операций (без визуальной задержки UI)
     };
     
     let tonesTimeout;
