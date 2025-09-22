@@ -125,8 +125,7 @@
           <label>
             Метод кластеризации:
             <select id="clusteringMethod">
-              <option value="kmeans" selected>k-means</option>
-              <option value="tones">По тонам</option>
+              <option value="kmeans" selected>k-means с регулировкой ΔE</option>
             </select>
           </label>
           <label>
@@ -142,28 +141,13 @@
           
           <!-- k-means Settings -->
           <div id="kmeansSettings" class="method-settings" style="display:block;">
-            <!-- Настройки для k-means -->
+            <label>
+              Чувствительность (ΔE):
+              <input type="range" id="deltaESensitivity" min="1" max="50" value="25" step="1">
+              <span id="deltaEValue">25</span>
+            </label>
           </div>
           
-          <!-- Tones Settings -->
-          <div id="tonesSettings" class="method-settings" style="display:none;">
-            <label>
-              Минимальная ΔE:
-              <input type="number" id="minDeltaE" min="1" max="100" value="25">
-            </label>
-            <label>
-              Тёмные:
-              <input type="number" id="darkCount" min="0" max="9" value="1" style="width:40px;">
-            </label>
-            <label>
-              Средние:
-              <input type="number" id="midCount" min="0" max="9" value="1" style="width:40px;">
-            </label>
-            <label>
-              Светлые:
-              <input type="number" id="lightCount" min="0" max="9" value="1" style="width:40px;">
-            </label>
-          </div>
         </div>
         
         <!-- Color Palette -->
@@ -310,12 +294,14 @@
 </div>
 
 <!-- JavaScript Modules -->
-<script src="assets/js/utils.js?v={{ site.github.build_revision }}"></script>
+<script src="assets/js/parameters.js?v={{ site.github.build_revision }}"></script>
 <script src="assets/js/telegramAPI.js?v={{ site.github.build_revision }}"></script>
 <script src="assets/js/imageProcessor.js?v={{ site.github.build_revision }}"></script>
+<script src="assets/js/backgroundDetector.js?v={{ site.github.build_revision }}"></script>
+<script src="assets/js/mapGenerator.js?v={{ site.github.build_revision }}"></script>
 <script src="assets/js/colorAnalyzer.js?v={{ site.github.build_revision }}"></script>
 <script src="assets/js/actualColors.js?v={{ site.github.build_revision }}"></script>
-<script src="assets/js/stringartGenerator.js?v={{ site.github.build_revision }}"></script>
+<script src="assets/js/stringartPreview.js?v={{ site.github.build_revision }}"></script>
 <script src="assets/js/app.js?v={{ site.github.build_revision }}"></script>
 
 <!-- Pipette functionality -->

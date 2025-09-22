@@ -279,10 +279,6 @@ class ActualColors {
           code.value = selectedColor;
           this.updateActualColor(index, selectedColor);
           
-          // Haptic feedback для Telegram
-          if (window.Telegram?.WebApp?.HapticFeedback) {
-            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-          }
         }
       });
     }
@@ -298,8 +294,8 @@ class ActualColors {
     }
     
     // Обновляем StringArt предпросмотр
-    if (this.app.stringartGenerator) {
-      this.app.stringartGenerator.generatePreview();
+    if (this.app.stringartPreview) {
+      this.app.stringartPreview.generatePreview();
     }
   }
 
@@ -316,16 +312,16 @@ class ActualColors {
     
     // Для каждого расчётного цвета находим ближайший фактический
     this.app.state.currentPalette.forEach((calculatedColor, index) => {
-      const calculatedRGB = Utils.hexToRgb(calculatedColor);
-      const calculatedLAB = Utils.rgbToLab(calculatedRGB[0], calculatedRGB[1], calculatedRGB[2]);
+      const calculatedRGB = this.app.colorAnalyzer.colorUtils.hexToRgb(calculatedColor);
+      const calculatedLAB = this.app.colorAnalyzer.colorUtils.rgbToLab(calculatedRGB[0], calculatedRGB[1], calculatedRGB[2]);
       
       let bestMatch = null;
       let bestDistance = Infinity;
       
       this.app.state.actualPalette.forEach((actualColor, actualIndex) => {
-        const actualRGB = Utils.hexToRgb(actualColor);
-        const actualLAB = Utils.rgbToLab(actualRGB[0], actualRGB[1], actualRGB[2]);
-        const distance = Utils.deltaE(calculatedLAB, actualLAB);
+        const actualRGB = this.app.colorAnalyzer.colorUtils.hexToRgb(actualColor);
+        const actualLAB = this.app.colorAnalyzer.colorUtils.rgbToLab(actualRGB[0], actualRGB[1], actualRGB[2]);
+        const distance = this.app.colorAnalyzer.colorUtils.deltaE(calculatedLAB, actualLAB);
         
         if (distance < bestDistance) {
           bestDistance = distance;
@@ -351,8 +347,8 @@ class ActualColors {
     this.generateActualColorMaps();
     
     // Обновляем StringArt предпросмотр
-    if (this.app.stringartGenerator) {
-      this.app.stringartGenerator.generatePreview();
+    if (this.app.stringartPreview) {
+      this.app.stringartPreview.generatePreview();
     }
   }
 
@@ -437,70 +433,27 @@ class ActualColors {
 
   // Функция для генерации масок с фактическими цветами
   generateActualColorMaps() {
-    this.elements.actualMapsContainer.innerHTML = '';
-    
-    const secondImg = document.getElementById('secondImg');
-    if (!secondImg.src || this.app.state.colorMapping.length === 0) {
-      this.elements.usedColorsInfo.textContent = '';
+    if (!this.app.mapGenerator) {
+      console.warn('MapGenerator не инициализирован');
       return;
     }
-    
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = secondImg.naturalWidth;
-    canvas.height = secondImg.naturalHeight;
-    ctx.drawImage(secondImg, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    
-    // Переводим цвета палитры из HEX в RGB
-    const calculatedRGB = this.app.state.currentPalette.map(hex => Utils.hexToRgb(hex));
-    
-    // Получаем уникальные индексы фактических цветов, которые используются в сопоставлении
-    const usedActualIndices = [...new Set(this.app.state.colorMapping.map(m => m.actualIndex))];
-    
+
     // Обновляем информацию об использованных цветах
-    this.elements.usedColorsInfo.textContent = `(используется ${usedActualIndices.length} из ${this.app.state.actualPalette.length} цветов)`;
-    
-    // Создаём маски только для фактических цветов, которые используются в сопоставлении
-    usedActualIndices.forEach(actualIndex => {
-      const actualColor = this.app.state.actualPalette[actualIndex];
-      const mapCanvas = document.createElement('canvas');
-      const mapCtx = mapCanvas.getContext('2d');
-      mapCanvas.width = canvas.width;
-      mapCanvas.height = canvas.height;
-      const mapImageData = mapCtx.createImageData(canvas.width, canvas.height);
-      const mapData = mapImageData.data;
-      
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i], g = data[i + 1], b = data[i + 2];
-        
-        // Находим ближайший расчётный цвет
-        const distances = calculatedRGB.map(c => Math.sqrt((r - c[0]) ** 2 + (g - c[1]) ** 2 + (b - c[2]) ** 2));
-        const minIndex = distances.indexOf(Math.min(...distances));
-        
-        // Проверяем, сопоставлен ли этот расчётный цвет с текущим фактическим
-        const mapping = this.app.state.colorMapping.find(m => m.calculatedIndex === minIndex);
-        if (mapping && mapping.actualIndex === actualIndex) {
-          mapData[i] = 0;     // Чёрный пиксель
-          mapData[i + 1] = 0;
-          mapData[i + 2] = 0;
-          mapData[i + 3] = 255;
-        } else {
-          mapData[i] = 255;   // Белый пиксель
-          mapData[i + 1] = 255;
-          mapData[i + 2] = 255;
-          mapData[i + 3] = 255;
-        }
-      }
-      
-      mapCtx.putImageData(mapImageData, 0, 0);
-      
-      const img = document.createElement('img');
-      img.src = mapCanvas.toDataURL();
-      img.style.border = `4px solid ${actualColor}`;
-      this.elements.actualMapsContainer.appendChild(img);
-    });
+    const stats = this.app.mapGenerator.getColorUsageStats(this.app.state.colorMapping);
+    this.elements.usedColorsInfo.textContent = `(используется ${stats.used} из ${stats.total} цветов)`;
+
+    // Используем централизованный MapGenerator
+    this.app.mapGenerator.generateColorMaps(
+      this.app.state.currentPalette,
+      'actualMapsContainer',
+      {
+        showLabels: false,
+        borderWidth: '4px',
+        useCache: true,
+        showLoading: false
+      },
+      this.app.state.colorMapping
+    );
   }
   
   reset() {

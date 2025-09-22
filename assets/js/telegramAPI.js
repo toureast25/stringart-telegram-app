@@ -273,27 +273,6 @@ class TelegramAPI {
     }
   }
   
-  hapticFeedback(type = 'light') {
-    if (this.tg && this.tg.HapticFeedback) {
-      switch (type) {
-        case 'light':
-          this.tg.HapticFeedback.impactOccurred('light');
-          break;
-        case 'medium':
-          this.tg.HapticFeedback.impactOccurred('medium');
-          break;
-        case 'heavy':
-          this.tg.HapticFeedback.impactOccurred('heavy');
-          break;
-        case 'success':
-          this.tg.HapticFeedback.notificationOccurred('success');
-          break;
-        case 'error':
-          this.tg.HapticFeedback.notificationOccurred('error');
-          break;
-      }
-    }
-  }
   
   // Геттеры для получения информации о пользователе и окружении
   get user() {

@@ -6,6 +6,113 @@
 class ImageProcessor {
   constructor(app) {
     this.app = app;
+    
+    // Утилиты для работы с изображениями (перенесены из utils.js)
+    this.imageUtils = {
+      // Получение среднего цвета по краям изображения
+      getAverageEdgeColor: (img, edgePercent = 10) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        const w = canvas.width;
+        const h = canvas.height;
+        const imageData = ctx.getImageData(0, 0, w, h).data;
+        
+        let r = 0, g = 0, b = 0, count = 0;
+        
+        const percent = Math.max(1, Math.min(100, edgePercent));
+        const edgeY = Math.max(1, Math.round(h * percent / 100));
+        const edgeX = Math.max(1, Math.round(w * percent / 100));
+        
+        // Верхняя полоса
+        for (let y = 0; y < edgeY; y++) {
+          for (let x = 0; x < w; x++) {
+            let i = (y * w + x) * 4;
+            r += imageData[i];
+            g += imageData[i + 1];
+            b += imageData[i + 2];
+            count++;
+          }
+        }
+        
+        // Нижняя полоса
+        for (let y = h - edgeY; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            let i = (y * w + x) * 4;
+            r += imageData[i];
+            g += imageData[i + 1];
+            b += imageData[i + 2];
+            count++;
+          }
+        }
+        
+        // Левая и правая полосы (без углов)
+        for (let x = 0; x < edgeX; x++) {
+          for (let y = edgeY; y < h - edgeY; y++) {
+            let iLeft = (y * w + x) * 4;
+            let iRight = (y * w + (w - 1 - x)) * 4;
+            
+            r += imageData[iLeft] + imageData[iRight];
+            g += imageData[iLeft + 1] + imageData[iRight + 1];
+            b += imageData[iLeft + 2] + imageData[iRight + 2];
+            count += 2;
+          }
+        }
+        
+        r = Math.round(r / count);
+        g = Math.round(g / count);
+        b = Math.round(b / count);
+        
+        return this.imageUtils.rgbToHex(r, g, b);
+      },
+      
+      // Конвертация RGB в HEX (для внутреннего использования)
+      rgbToHex: (r, g, b) => {
+        return '#' + [r, g, b].map(x => 
+          x.toString(16).padStart(2, '0')
+        ).join('');
+      },
+      
+      // Загрузка изображения с Promise
+      loadImage: (src) => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+      },
+      
+      // Создание canvas из изображения
+      imageToCanvas: (img) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        return canvas;
+      },
+      
+      // Получение данных пикселей из canvas
+      getPixelData: (canvas) => {
+        const ctx = canvas.getContext('2d');
+        return ctx.getImageData(0, 0, canvas.width, canvas.height);
+      },
+      
+      // Применение фильтра к canvas
+      applyCanvasFilter: (canvas, filter) => {
+        const ctx = canvas.getContext('2d');
+        const originalFilter = ctx.filter;
+        ctx.filter = filter;
+        ctx.drawImage(canvas, 0, 0);
+        ctx.filter = originalFilter;
+        return canvas;
+      }
+    };
     this.fileInput = this.createFileInput();
     this.cameraStream = null;
     this.snapshotCanvas = document.getElementById('snapshotCanvas');
@@ -160,8 +267,9 @@ class ImageProcessor {
   }
   
   loadImage(url) {
-    // Для тестового изображения используем прямой URL
-    const defaultImgUrl = 'https://sun9-83.userapi.com/s/v1/ig1/XJRPO-T4RuE0KFMctnOM20rCs68dYcO4H5KnFW6s5E_x1BlQhkN2lojil1AW11LQ6xGG1uKa.jpg?quality=96&as=32x40,48x60,72x90,108x135,160x200,240x300,360x449,480x599,540x674,640x799,720x899,865x1080&from=bu&cs=865x0';
+    // Получаем URL тестового изображения из параметров
+    const params = window.appParameters;
+    const defaultImgUrl = params.image.testImage.url;
     
     const img = new Image();
     img.crossOrigin = 'Anonymous';
@@ -177,8 +285,10 @@ class ImageProcessor {
     };
     img.onerror = () => {
       console.error('Failed to load default image, trying fallback');
-      // Fallback - создаем простое тестовое изображение
-      this.createFallbackImage();
+      // Fallback - создаем простое тестовое изображение если включено
+      if (params.image.testImage.fallback) {
+        this.createFallbackImage();
+      }
     };
     img.src = defaultImgUrl;
   }
@@ -235,15 +345,20 @@ class ImageProcessor {
   }
   
   setupControls(width) {
-    // Жёсткие лимиты и дефолты для параметра Разрешение
-    const MAX_ALLOWED = 300;
-    const DEFAULT_WIDTH = 200;
+    // Получаем параметры из централизованного файла
+    const params = window.appParameters;
+    const MAX_ALLOWED = params.image.resolution.max;
+    const DEFAULT_WIDTH = params.image.resolution.default;
     
-    // Предельное значение — 300px вне зависимости от устройства/Telegram
+    // Предельное значение из параметров
     const maxWidth = Math.min(width, MAX_ALLOWED);
     
     this.elements.resolutionRange.max = MAX_ALLOWED;
     this.elements.resolutionInput.max = MAX_ALLOWED;
+    this.elements.resolutionRange.min = params.image.resolution.min;
+    this.elements.resolutionInput.min = params.image.resolution.min;
+    this.elements.resolutionRange.step = params.image.resolution.step;
+    this.elements.resolutionInput.step = params.image.resolution.step;
     
     const initial = Math.min(DEFAULT_WIDTH, maxWidth);
     this.elements.resolutionRange.value = initial;
@@ -266,19 +381,23 @@ class ImageProcessor {
     
     const img = new Image();
     img.onload = () => {
-      // Проверяем размер изображения для предотвращения проблем с памятью на мобильных
+      // Получаем параметры из централизованного файла
+      const params = window.appParameters;
+      const MAX_ALLOWED = params.image.resolution.max;
+      const MIN_ALLOWED = params.image.resolution.min;
+      const DEFAULT_WIDTH = params.image.resolution.default;
+      
       // Кламп значения разрешения по заданным лимитам
-      const MAX_ALLOWED = 300;
-      const MIN_ALLOWED = 100;
       let newWidth = parseInt(this.elements.resolutionInput.value);
-      if (isNaN(newWidth)) newWidth = 200;
+      if (isNaN(newWidth)) newWidth = DEFAULT_WIDTH;
       newWidth = Math.max(MIN_ALLOWED, Math.min(MAX_ALLOWED, newWidth));
       this.elements.resolutionRange.value = newWidth;
       this.elements.resolutionInput.value = newWidth;
       const newHeight = this.app.state.originalHeight * (newWidth / this.app.state.originalWidth);
       const imageSize = newWidth * newHeight;
       
-      if (this.isMobileDevice() && imageSize > 400000) { // > 400k пикселей
+      const maxImageSize = params.performance.mobile.maxImageSize;
+      if (this.isMobileDevice() && imageSize > maxImageSize) {
         console.warn('Large image size on mobile device:', imageSize);
         if (this.app.telegramAPI) {
           this.app.telegramAPI.showAlert('Внимание: большое разрешение может замедлить работу на мобильном устройстве');
@@ -293,9 +412,11 @@ class ImageProcessor {
       
       // Применяем размытие
       let blurValue = parseFloat(this.elements.blurInput.value) || 0;
-      // Ограничиваем размытие до диапазона 0..1
-      if (blurValue < 0) blurValue = 0;
-      if (blurValue > 1) blurValue = 1;
+      // Ограничиваем размытие по параметрам
+      const blurMin = params.image.blur.min;
+      const blurMax = params.image.blur.max;
+      if (blurValue < blurMin) blurValue = blurMin;
+      if (blurValue > blurMax) blurValue = blurMax;
       this.elements.blurRange.value = blurValue;
       this.elements.blurInput.value = blurValue;
       
@@ -434,7 +555,7 @@ class ImageProcessor {
   performBackgroundDetection() {
     const bgEdgePercent = document.getElementById('bgEdgePercent');
     const percent = bgEdgePercent ? parseInt(bgEdgePercent.value) || 10 : 10;
-    const bgColor = Utils.getAverageEdgeColor(this.elements.previewImg, percent);
+    const bgColor = this.imageUtils.getAverageEdgeColor(this.elements.previewImg, percent);
     this.app.setBackgroundColor(bgColor);
   }
   

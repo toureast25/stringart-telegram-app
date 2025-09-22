@@ -7,12 +7,60 @@ class ColorAnalyzer {
   constructor(app) {
     this.app = app;
     
-    // Кеш для оптимизации производительности
-    this.cache = {
-      lastImageSrc: null,
-      lastPalette: null,
-      colorMaps: null
+    // Цветовые утилиты (перенесены из utils.js)
+    this.colorUtils = {
+      // Конвертация RGB в LAB цветовое пространство
+      rgbToLab: (r, g, b) => {
+        function pivot(n) {
+          return n > 0.008856 ? Math.pow(n, 1/3) : (7.787 * n) + (16/116);
+        }
+        
+        r /= 255;
+        g /= 255;
+        b /= 255;
+        
+        r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+        g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+        b = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+        
+        let x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+        let y = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 1.000;
+        let z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+        
+        x = pivot(x);
+        y = pivot(y);
+        z = pivot(z);
+        
+        return [(116 * y) - 16, 500 * (x - y), 200 * (y - z)];
+      },
+      
+      // Вычисление различия между цветами в LAB пространстве (Delta E)
+      deltaE: (lab1, lab2) => {
+        return Math.sqrt(
+          (lab1[0] - lab2[0]) ** 2 + 
+          (lab1[1] - lab2[1]) ** 2 + 
+          (lab1[2] - lab2[2]) ** 2
+        );
+      },
+      
+      // Конвертация RGB в HEX
+      rgbToHex: (r, g, b) => {
+        return '#' + [r, g, b].map(x => 
+          x.toString(16).padStart(2, '0')
+        ).join('');
+      },
+      
+      // Конвертация HEX в RGB
+      hexToRgb: (hex) => {
+        const bigint = parseInt(hex.slice(1), 16);
+        return [
+          (bigint >> 16) & 255,
+          (bigint >> 8) & 255,
+          bigint & 255
+        ];
+      }
     };
+    
     
     // Элементы индикаторов загрузки
     this.loadingElements = {
@@ -23,14 +71,11 @@ class ColorAnalyzer {
     this.elements = {
       clusteringMethod: document.getElementById('clusteringMethod'),
       colorCount: document.getElementById('colorCount'),
-      minDeltaEInput: document.getElementById('minDeltaE'),
-      darkCount: document.getElementById('darkCount'),
-      midCount: document.getElementById('midCount'),
-      lightCount: document.getElementById('lightCount'),
+      deltaESensitivity: document.getElementById('deltaESensitivity'),
+      deltaEValue: document.getElementById('deltaEValue'),
       paletteDiv: document.getElementById('palette'),
       colorMaps: document.getElementById('colorMaps'),
       kmeansSettings: document.getElementById('kmeansSettings'),
-      tonesSettings: document.getElementById('tonesSettings'),
       backgroundSettings: document.getElementById('backgroundSettings'),
       bgColorPicker: document.getElementById('bgColorPicker'),
       currentBgColor: document.getElementById('currentBgColor'),
@@ -39,9 +84,19 @@ class ColorAnalyzer {
     };
     
     this.bindEvents();
+    
+    // Инициализация значений по умолчанию
+    const params = window.appParameters;
+    if (this.elements.clusteringMethod) {
+      this.elements.clusteringMethod.value = params.colorAnalysis.clusteringMethods.default;
+      this.updateMethodInterface();
+    }
   }
   
   bindEvents() {
+    // Получаем параметры задержек
+    const params = window.appParameters;
+    
     // Debouncing для тяжелых операций с requestAnimationFrame
     let paletteTimeout;
     const debouncedExtractPalette = () => {
@@ -50,18 +105,9 @@ class ColorAnalyzer {
         requestAnimationFrame(() => {
           this.extractPalette();
         });
-      }, 36); // 36ms задержка для тяжелых операций
+      }, params.performance.delays.paletteExtraction);
     };
     
-    let tonesTimeout;
-    const debouncedTonesChange = () => {
-      clearTimeout(tonesTimeout);
-      tonesTimeout = setTimeout(() => {
-        requestAnimationFrame(() => {
-          this.handleTonesCountChange();
-        });
-      }, 24); // 24ms для средних операций
-    };
     
     // Обработчики для метода кластеризации
     this.elements.clusteringMethod?.addEventListener('change', () => {
@@ -71,17 +117,16 @@ class ColorAnalyzer {
     
     // Обработчики для количества цветов
     this.elements.colorCount?.addEventListener('change', () => {
-      if (this.elements.clusteringMethod.value === 'tones') {
-        this.updateTonesProportions();
-      }
       this.extractPalette(); // Без debouncing для dropdown
     });
     
-    // Обработчики для метода по тонам с debouncing
-    this.elements.minDeltaEInput?.addEventListener('input', debouncedExtractPalette);
-    this.elements.darkCount?.addEventListener('input', debouncedTonesChange);
-    this.elements.midCount?.addEventListener('input', debouncedTonesChange);
-    this.elements.lightCount?.addEventListener('input', debouncedTonesChange);
+    // Обработчик для ползунка чувствительности дельта Е
+    this.elements.deltaESensitivity?.addEventListener('input', (e) => {
+      if (this.elements.deltaEValue) {
+        this.elements.deltaEValue.textContent = e.target.value;
+      }
+      debouncedExtractPalette();
+    });
     
     // Debouncing для фоновых настроек
     let bgTimeout;
@@ -89,7 +134,7 @@ class ColorAnalyzer {
       clearTimeout(bgTimeout);
       bgTimeout = setTimeout(() => {
         this.recalculateBackgroundColor();
-      }, 24);
+      }, params.performance.delays.backgroundRecalc);
     };
     
     // Обработчики для настроек фона
@@ -170,40 +215,13 @@ class ColorAnalyzer {
   }
 
   updateMethodInterface() {
-    const method = this.elements.clusteringMethod.value;
-    
-    if (method === 'kmeans') {
-      this.elements.kmeansSettings.style.display = 'none';
-      this.elements.tonesSettings.style.display = 'none';
-    } else if (method === 'tones') {
-      this.elements.kmeansSettings.style.display = 'none';
-      this.elements.tonesSettings.style.display = 'block';
-      this.updateTonesProportions();
+    // Теперь у нас единый метод кластеризации на основе k-means
+    // Всегда показываем настройки k-means с ползунком дельта Е
+    if (this.elements.kmeansSettings) {
+      this.elements.kmeansSettings.style.display = 'block';
     }
   }
   
-  updateTonesProportions() {
-    const total = parseInt(this.elements.colorCount.value) || 3;
-    const perGroup = Math.floor(total / 3);
-    const remainder = total % 3;
-    
-    this.elements.darkCount.value = perGroup;
-    this.elements.midCount.value = perGroup + remainder;
-    this.elements.lightCount.value = perGroup;
-  }
-  
-  handleTonesCountChange() {
-    const darkN = parseInt(this.elements.darkCount.value) || 0;
-    const midN = parseInt(this.elements.midCount.value) || 0;
-    const lightN = parseInt(this.elements.lightCount.value) || 0;
-    const total = darkN + midN + lightN;
-    const currentTotal = parseInt(this.elements.colorCount.value) || 0;
-    
-    if (total > currentTotal) {
-      this.elements.colorCount.value = total;
-    }
-    this.extractPalette();
-  }
   
   // Методы для управления индикаторами загрузки
   showPaletteLoading() {
@@ -218,17 +236,6 @@ class ColorAnalyzer {
     }
   }
   
-  showMasksLoading() {
-    if (this.loadingElements.masksOverlay) {
-      this.loadingElements.masksOverlay.classList.add('active');
-    }
-  }
-  
-  hideMasksLoading() {
-    if (this.loadingElements.masksOverlay) {
-      this.loadingElements.masksOverlay.classList.remove('active');
-    }
-  }
 
   extractPalette() {
     // Показываем индикатор загрузки
@@ -275,31 +282,35 @@ class ColorAnalyzer {
     // Собираем цвета из изображения (оптимизированное семплирование)
     let sampleColors = [];
     
-    // Более агрессивное ограничение для мобильных при больших разрешениях
+    // Получаем параметры производительности
+    const params = window.appParameters;
     const imageSize = canvas.width * canvas.height;
     let step;
     
     if (this.isMobileDevice()) {
-      // На мобильных используем еще более агрессивный шаг
-      if (imageSize > 200000) { // Большие изображения (> 200k пикселей)
-        step = 4 * 24; // Экстремально большой шаг
+      // На мобильных используем параметры из конфигурации
+      const mobileStep = params.performance.mobile.samplingStep;
+      if (imageSize > 200000) { // Большие изображения
+        step = mobileStep * 2; // Экстремально большой шаг
       } else if (imageSize > 100000) { // Средние изображения
-        step = 4 * 16; 
+        step = mobileStep * 1.5; 
       } else if (imageSize > 50000) { // Маленькие изображения
-        step = 4 * 12;
+        step = mobileStep;
       } else {
-        step = 4 * 8; // Очень маленькие
+        step = mobileStep / 2; // Очень маленькие
       }
     } else {
-      step = 4 * 6; // Десктоп
+      step = params.performance.desktop.samplingStep; // Десктоп
     }
     
     for (let i = 0; i < data.length; i += step) {
       sampleColors.push([data[i], data[i + 1], data[i + 2]]);
     }
     
-    // Еще более жесткие ограничения для мобильных
-    const maxSamples = this.isMobileDevice() ? 2000 : 5000;
+    // Ограничения для мобильных и десктопа из параметров
+    const maxSamples = this.isMobileDevice() ? 
+      params.performance.mobile.maxSamples : 
+      params.performance.desktop.maxSamples;
     if (sampleColors.length > maxSamples) {
       const ratio = Math.floor(sampleColors.length / maxSamples);
       sampleColors = sampleColors.filter((_, index) => index % ratio === 0);
@@ -310,19 +321,17 @@ class ColorAnalyzer {
     const method = this.elements.clusteringMethod.value;
     let resultColors = [];
     
-    if (method === 'kmeans') {
-      const total = parseInt(this.elements.colorCount.value) || 3;
-      const centroids = this.kMeansClustering(sampleColors, total);
-      resultColors = centroids;
-    } else if (method === 'tones') {
-      resultColors = this.clusterByTones(sampleColors);
-    }
+    // Единый метод кластеризации на основе k-means с регулировкой дельта Е
+    const total = parseInt(this.elements.colorCount.value) || params.colorAnalysis.colorCount.default;
+    const deltaESensitivity = parseInt(this.elements.deltaESensitivity?.value) || 25;
+    resultColors = this.unifiedClustering(sampleColors, total, deltaESensitivity);
     
     // Преобразуем цвета в HEX формат
-    const palette = resultColors.map(c => Utils.rgbToHex(c[0], c[1], c[2]));
+    const palette = resultColors.map(c => this.colorUtils.rgbToHex(c[0], c[1], c[2]));
     
     // Добавляем цвет фона в начало палитры
-    palette.unshift(this.app.state.backgroundColor);
+    const defaultBgColor = params.background.defaultColor;
+    palette.unshift(this.app.state.backgroundColor || defaultBgColor);
     
     // Обновляем состояние приложения
     this.app.setPalette(palette);
@@ -338,14 +347,6 @@ class ColorAnalyzer {
     // Скрываем индикатор загрузки
     this.hidePaletteLoading();
     
-    // Специальная обработка для Telegram WebApp
-    if (window.Telegram && window.Telegram.WebApp) {
-      try {
-        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-      } catch (e) {
-        // Haptic feedback не доступен
-      }
-    }
   }
   
   // Определение мобильного устройства и Telegram
@@ -354,6 +355,15 @@ class ColorAnalyzer {
            window.innerWidth <= 768 ||
            ('ontouchstart' in window) ||
            (window.Telegram && window.Telegram.WebApp);
+  }
+  
+  // Единый метод кластеризации на основе k-means с регулировкой дельта Е
+  unifiedClustering(colors, k, deltaESensitivity, maxIterations = 100) {
+    // Сначала выполняем k-means кластеризацию
+    let centroids = this.kMeansClustering(colors, k, maxIterations);
+    
+    // Затем применяем фильтрацию по дельта Е для удаления похожих цветов
+    return this.filterSimilarColors(centroids, deltaESensitivity);
   }
   
   // k-means алгоритм кластеризации
@@ -374,7 +384,7 @@ class ColorAnalyzer {
       
       let centroidsChanged = false;
       for (let i = 0; i < k; i++) {
-        if (Utils.deltaE(Utils.rgbToLab(...centroids[i]), Utils.rgbToLab(...newCentroids[i])) > 1) {
+        if (this.colorUtils.deltaE(this.colorUtils.rgbToLab(...centroids[i]), this.colorUtils.rgbToLab(...newCentroids[i])) > 1) {
           centroidsChanged = true;
           break;
         }
@@ -403,7 +413,7 @@ class ColorAnalyzer {
     let nearestIndex = 0;
     
     for (let i = 0; i < centroids.length; i++) {
-      const distance = Utils.deltaE(Utils.rgbToLab(...color), Utils.rgbToLab(...centroids[i]));
+      const distance = this.colorUtils.deltaE(this.colorUtils.rgbToLab(...color), this.colorUtils.rgbToLab(...centroids[i]));
       if (distance < minDistance) {
         minDistance = distance;
         nearestIndex = i;
@@ -427,50 +437,34 @@ class ColorAnalyzer {
     ];
   }
   
-  // Кластеризация по тонам
-  clusterByTones(colors) {
-    let colorsWithL = colors.map(rgb => {
-      let lab = Utils.rgbToLab(rgb[0], rgb[1], rgb[2]);
-      return { rgb, L: lab[0] };
-    });
-    colorsWithL.sort((a, b) => a.L - b.L);
+  // Фильтрация похожих цветов по дельта Е
+  filterSimilarColors(colors, minDeltaE) {
+    if (colors.length === 0) return colors;
     
-    let n = colorsWithL.length;
-    let borders = [Math.floor(n / 3), Math.floor(2 * n / 3)];
-    let groups = [[], [], []];
+    const filtered = [];
+    const colorsWithLab = colors.map(color => ({
+      rgb: color,
+      lab: this.colorUtils.rgbToLab(color[0], color[1], color[2])
+    }));
     
-    for (let i = 0; i < n; i++) {
-      if (i < borders[0]) groups[0].push(colorsWithL[i].rgb);
-      else if (i < borders[1]) groups[1].push(colorsWithL[i].rgb);
-      else groups[2].push(colorsWithL[i].rgb);
+    // Сортируем цвета по яркости (L компонента в LAB)
+    colorsWithLab.sort((a, b) => b.lab[0] - a.lab[0]);
+    
+    for (const colorData of colorsWithLab) {
+      // Проверяем, есть ли уже похожий цвет в отфильтрованном списке
+      const isSimilar = filtered.some(existingColor => {
+        const existingLab = this.colorUtils.rgbToLab(existingColor[0], existingColor[1], existingColor[2]);
+        return this.colorUtils.deltaE(colorData.lab, existingLab) < minDeltaE;
+      });
+      
+      if (!isSimilar) {
+        filtered.push(colorData.rgb);
+      }
     }
     
-    let darkN = parseInt(this.elements.darkCount.value) || 0;
-    let midN = parseInt(this.elements.midCount.value) || 0;
-    let lightN = parseInt(this.elements.lightCount.value) || 0;
-    
-    let uniq = [];
-    let filteredDark = this.filterColorsByDeltaE(groups[0], parseInt(this.elements.minDeltaEInput.value));
-    let filteredMid = this.filterColorsByDeltaE(groups[1], parseInt(this.elements.minDeltaEInput.value));
-    let filteredLight = this.filterColorsByDeltaE(groups[2], parseInt(this.elements.minDeltaEInput.value));
-    
-    uniq = uniq.concat(filteredDark.slice(0, darkN));
-    uniq = uniq.concat(filteredMid.slice(0, midN));
-    uniq = uniq.concat(filteredLight.slice(0, lightN));
-    
-    return uniq;
+    return filtered;
   }
   
-  filterColorsByDeltaE(colors, minDeltaE) {
-    let res = [];
-    colors.forEach(c => {
-      let lab = Utils.rgbToLab(c[0], c[1], c[2]);
-      if (!res.some(r => Utils.deltaE(lab, r.lab) < minDeltaE)) {
-        res.push({ rgb: c, lab });
-      }
-    });
-    return res.map(r => r.rgb);
-  }
   
   renderPalette() {
     this.elements.paletteDiv.innerHTML = '';
@@ -593,7 +587,7 @@ class ColorAnalyzer {
 
     const setFromHex = (hex) => {
       if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return;
-      const [r, g, b] = Utils.hexToRgb(hex);
+      const [r, g, b] = this.colorUtils.hexToRgb(hex);
       hexInput.value = hex.toLowerCase();
       rInput.value = r;
       gInput.value = g;
@@ -612,7 +606,7 @@ class ColorAnalyzer {
       const r = clamp255(rInput.value);
       const g = clamp255(gInput.value);
       const b = clamp255(bInput.value);
-      const hex = Utils.rgbToHex(r, g, b);
+      const hex = this.colorUtils.rgbToHex(r, g, b);
       hexInput.value = hex;
       preview.style.background = hex;
       currentHex = hex;
@@ -640,7 +634,7 @@ class ColorAnalyzer {
     };
     const onOk = () => {
       // Берём актуальное значение из HEX поля, иначе собираем из RGB
-      let finalHex = normalizeHex(hexInput.value) || Utils.rgbToHex(
+      let finalHex = normalizeHex(hexInput.value) || this.colorUtils.rgbToHex(
         Math.max(0, Math.min(255, parseInt(rInput.value || 0))),
         Math.max(0, Math.min(255, parseInt(gInput.value || 0))),
         Math.max(0, Math.min(255, parseInt(bInput.value || 0)))
@@ -818,7 +812,7 @@ class ColorAnalyzer {
     }
     function applyFromHSV() {
       const rgb = hsvToRgb(currentHue, currentS, currentV);
-      const hex = Utils.rgbToHex(rgb[0], rgb[1], rgb[2]);
+      const hex = this.colorUtils.rgbToHex(rgb[0], rgb[1], rgb[2]);
       currentHex = hex;
       hexInput.value = hex;
       rInput.value = rgb[0]; gInput.value = rgb[1]; bInput.value = rgb[2];
@@ -979,96 +973,23 @@ class ColorAnalyzer {
   }
   
   generateColorMaps() {
-    // Показываем индикатор загрузки масок
-    this.showMasksLoading();
-    
-    const secondImg = document.getElementById('secondImg');
-    if (!secondImg.src || this.app.state.currentPalette.length === 0) {
-      this.hideMasksLoading();
+    if (!this.app.mapGenerator) {
+      console.warn('MapGenerator не инициализирован');
       return;
     }
-    
-    // Проверяем кеш для оптимизации
-    const currentImageSrc = secondImg.src;
-    const currentPalette = JSON.stringify(this.app.state.currentPalette);
-    
-    if (this.cache.lastImageSrc === currentImageSrc && 
-        this.cache.lastPalette === currentPalette && 
-        this.cache.colorMaps) {
-      // Используем кешированные маски
-      this.elements.colorMaps.innerHTML = this.cache.colorMaps;
-      this.hideMasksLoading();
-      return;
-    }
-    
-    this.elements.colorMaps.innerHTML = '';
-    
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = secondImg.naturalWidth;
-    canvas.height = secondImg.naturalHeight;
-    ctx.drawImage(secondImg, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    
-    const paletteRGB = this.app.state.currentPalette.map(hex => Utils.hexToRgb(hex));
-    
-    paletteRGB.forEach((color, index) => {
-      const mapCanvas = document.createElement('canvas');
-      const mapCtx = mapCanvas.getContext('2d');
-      mapCanvas.width = canvas.width;
-      mapCanvas.height = canvas.height;
-      const mapImageData = mapCtx.createImageData(canvas.width, canvas.height);
-      const mapData = mapImageData.data;
-      
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i], g = data[i + 1], b = data[i + 2];
-        const distances = paletteRGB.map(c => Math.sqrt((r - c[0]) ** 2 + (g - c[1]) ** 2 + (b - c[2]) ** 2));
-        const minIndex = distances.indexOf(Math.min(...distances));
-        
-        if (minIndex === index) {
-          mapData[i] = 0;
-          mapData[i + 1] = 0;
-          mapData[i + 2] = 0;
-          mapData[i + 3] = 255;
-        } else {
-          mapData[i] = 255;
-          mapData[i + 1] = 255;
-          mapData[i + 2] = 255;
-          mapData[i + 3] = 255;
-        }
+
+    // Используем централизованный MapGenerator
+    this.app.mapGenerator.generateColorMaps(
+      this.app.state.currentPalette,
+      'colorMaps',
+      {
+        showLabels: true,
+        labelPrefix: 'ЦВЕТ',
+        borderWidth: '4px',
+        useCache: true,
+        showLoading: true
       }
-      
-      mapCtx.putImageData(mapImageData, 0, 0);
-      
-      const mapContainer = document.createElement('div');
-      mapContainer.className = 'map-container';
-      
-      const img = document.createElement('img');
-      img.src = mapCanvas.toDataURL();
-      img.style.border = `4px solid ${this.app.state.currentPalette[index]}`;
-      
-      const label = document.createElement('div');
-      label.className = 'map-label';
-      if (index === 0) {
-        label.textContent = 'ФОН';
-        label.style.backgroundColor = 'rgba(46,166,255,0.9)';
-      } else {
-        label.textContent = `ЦВЕТ ${index}`;
-      }
-      
-      mapContainer.appendChild(img);
-      mapContainer.appendChild(label);
-      this.elements.colorMaps.appendChild(mapContainer);
-    });
-    
-    // Сохраняем в кеш для оптимизации
-    this.cache.lastImageSrc = currentImageSrc;
-    this.cache.lastPalette = currentPalette;
-    this.cache.colorMaps = this.elements.colorMaps.innerHTML;
-    
-    // Скрываем индикатор загрузки
-    this.hideMasksLoading();
+    );
   }
   
   openPipette(colorIndex) {
@@ -1153,10 +1074,6 @@ class ColorAnalyzer {
     // Выполняем автоматическое определение цвета фона
     this.recalculateBackgroundColor();
     
-    // Показываем уведомление об успешном определении
-    if (this.app.telegramAPI) {
-      this.app.telegramAPI.hapticFeedback('light');
-    }
   }
   
   reset() {
@@ -1166,8 +1083,15 @@ class ColorAnalyzer {
     document.getElementById('paletteSection').classList.remove('active');
     
     // Сброс значений
+    const params = window.appParameters;
     this.elements.clusteringMethod.value = 'kmeans';
-    this.elements.colorCount.value = '3';
+    this.elements.colorCount.value = params.colorAnalysis.colorCount.default;
+    if (this.elements.deltaESensitivity) {
+      this.elements.deltaESensitivity.value = 25;
+    }
+    if (this.elements.deltaEValue) {
+      this.elements.deltaEValue.textContent = '25';
+    }
     this.updateMethodInterface();
   }
   

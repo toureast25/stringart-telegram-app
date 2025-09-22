@@ -1,9 +1,9 @@
 /**
- * StringArtGenerator - Модуль для генерации схем StringArt
- * Отвечает за создание схем полотна, расчет положения гвоздей и наложение масок
+ * StringArtPreview - Модуль для настройки параметров и превью StringArt
+ * Отвечает за настройку параметров полотна, отображение схемы и предпросмотр результата
  */
 
-class StringArtGenerator {
+class StringArtPreview {
   constructor(app) {
     this.app = app;
     
@@ -23,13 +23,16 @@ class StringArtGenerator {
   }
   
   bindEvents() {
+    // Получаем параметры задержек
+    const params = window.appParameters;
+    
     // Debouncing для генерации превью
     let previewTimeout;
     const debouncedGeneratePreview = () => {
       clearTimeout(previewTimeout);
       previewTimeout = setTimeout(() => {
         this.generatePreview();
-      }, 30); // 30ms для визуальных обновлений
+      }, params.performance.delays.previewGeneration);
     };
     
     // Обработчики для настроек StringArt
@@ -137,7 +140,8 @@ class StringArtGenerator {
   
   drawNails(ctx, centerX, centerY, radius, shape, nailCount) {
     ctx.fillStyle = '#000000';
-    const nailRadius = 1.5; // Размер гвоздиков
+    const params = window.appParameters;
+    const nailRadius = params.stringart.nailSize; // Размер гвоздиков из параметров
     
     for (let i = 0; i < nailCount; i++) {
       const angle = (i / nailCount) * 2 * Math.PI;
@@ -194,7 +198,7 @@ class StringArtGenerator {
     const data = imageData.data;
     
     // Переводим цвета палитры из HEX в RGB
-    const calculatedRGB = this.app.state.currentPalette.map(hex => Utils.hexToRgb(hex));
+    const calculatedRGB = this.app.state.currentPalette.map(hex => this.app.colorAnalyzer.colorUtils.hexToRgb(hex));
     
     // Размер области изображения в схеме
     const schemeImageSize = imageRadius * 2;
@@ -204,7 +208,7 @@ class StringArtGenerator {
     
     usedActualIndices.forEach(actualIndex => {
       const actualColor = this.app.state.actualPalette[actualIndex];
-      const actualRGB = Utils.hexToRgb(actualColor);
+      const actualRGB = this.app.colorAnalyzer.colorUtils.hexToRgb(actualColor);
       
       // Создаём маску для этого цвета
       const maskCanvas = document.createElement('canvas');
@@ -314,8 +318,8 @@ class StringArtGenerator {
       
       coordinates.push({ 
         index: i, 
-        x: Utils.formatNumber(x, 2), 
-        y: Utils.formatNumber(y, 2) 
+        x: this.app.domUtils.formatNumber(x, 2), 
+        y: this.app.domUtils.formatNumber(y, 2) 
       });
     }
     
@@ -371,6 +375,9 @@ class StringArtGenerator {
   }
   
   reset() {
+    // Получаем параметры по умолчанию
+    const params = window.appParameters;
+    
     // Сброс UI элементов
     this.elements.stringartSection.classList.remove('active');
     
@@ -378,11 +385,17 @@ class StringArtGenerator {
     const ctx = this.elements.stringartCanvas.getContext('2d');
     ctx.clearRect(0, 0, this.elements.stringartCanvas.width, this.elements.stringartCanvas.height);
     
-    // Сброс значений
-    this.elements.canvasShape.value = 'circle';
-    this.elements.canvasSize.value = '30';
-    this.elements.nailCount.value = '200';
-    this.elements.stringartInfo.textContent = 'Размер: 30 см | Гвоздей: 200 | Расстояние между гвоздями: ~0.47 см';
+    // Сброс значений из параметров
+    this.elements.canvasShape.value = params.stringart.canvasShape.default;
+    this.elements.canvasSize.value = params.stringart.canvasSize.default;
+    this.elements.nailCount.value = params.stringart.nailCount.default;
+    
+    // Обновляем информацию
+    this.updateInfo(
+      params.stringart.canvasSize.default,
+      params.stringart.nailCount.default,
+      params.stringart.canvasShape.default
+    );
   }
   
   onStateChange(state) {
@@ -398,5 +411,5 @@ class StringArtGenerator {
 
 // Экспорт для использования в других модулях
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = StringArtGenerator;
+  module.exports = StringArtPreview;
 }
